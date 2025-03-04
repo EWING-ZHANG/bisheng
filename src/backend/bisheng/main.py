@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
+import subprocess
 
 from bisheng.api import router, router_rpc
 from bisheng.database.init_data import init_default_data
@@ -20,6 +21,8 @@ from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from loguru import logger
 import debugpy
+from bisheng.api import settings as ragflowSettings
+
 # 启动调试代理并监听端口 5677
 debugpy.listen(('0.0.0.0', 5670))
 print("Waiting for debugger to attach...")
@@ -101,6 +104,7 @@ def create_app():
     app.include_router(router)
     app.include_router(router_rpc)
     register_restructure(app)
+
     return app
 
 
@@ -148,10 +152,22 @@ def setup_promethues(app: FastAPI):
 
 
 configure(settings.logger_conf)
+import os
+import sys
 
+def set_pythonpath():
+  
+    # 设置环境变量
+    os.environ["PYTHONPATH"] = '/home/ewing/miniconda3/envs/BiShengVENV/bin/python'
 app = create_app()
-
+def run_workers():
+    script_path = "/home/ewing/newProject/bisheng/docker/launch_backend_service.sh"
+    subprocess.run(["/bin/bash", script_path])
 if __name__ == '__main__':
     import uvicorn
-
+    # 设置python环境
+    set_pythonpath()
+    run_workers()
+     ragflowSettings.init_settings()
+    # 直接执行shell脚本
     uvicorn.run(app, host='0.0.0.0', port=7860, workers=1)

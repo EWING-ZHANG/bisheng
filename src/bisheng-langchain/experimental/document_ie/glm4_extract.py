@@ -10,7 +10,7 @@ from typing import List
 
 import pandas as pd
 import yaml
-import zhipu
+# import zhipu
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from tqdm import tqdm
 
@@ -19,9 +19,9 @@ import re
 import time
 from collections import defaultdict
 
-from zhipuai import ZhipuAI
+# from zhipuai import ZhipuAI
 
-client = ZhipuAI(api_key="")
+# client = ZhipuAI(api_key="")
 
 from langchain.prompts import PromptTemplate
 from loguru import logger

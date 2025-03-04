@@ -17,12 +17,13 @@ import logging
 import inspect
 import os
 import sys
-import typing
+import typing 
+from typing import Optional,List
 import operator
 from enum import Enum
 from functools import wraps
 from itsdangerous.url_safe import URLSafeTimedSerializer as Serializer
-from flask_login import UserMixin
+# from flask_login import UserMixin
 from playhouse.migrate import MySQLMigrator, PostgresqlMigrator, migrate
 from peewee import (
     BigIntegerField, BooleanField, CharField,
@@ -30,12 +31,12 @@ from peewee import (
     Field, Model, Metadata
 )
 from playhouse.pool import PooledMySQLDatabase, PooledPostgresqlDatabase
-
-
-from api.db import SerializedType, ParserType
-from api import settings
-from api import utils
-
+from bisheng.api.db import SerializedType, ParserType
+from bisheng.api import settings
+from bisheng.api import util
+import peewee
+from datetime import datetime
+from pydantic import BaseModel as pydanticBaseModel
 
 def singleton(cls, *args, **kw):
     instances = {}
@@ -79,12 +80,12 @@ class JSONField(LongTextField):
     def db_value(self, value):
         if value is None:
             value = self.default_value
-        return utils.json_dumps(value)
+        return util.json_dumps(value)
 
     def python_value(self, value):
         if not value:
             return self.default_value
-        return utils.json_loads(
+        return util.json_loads(
             value, object_hook=self._object_hook, object_pairs_hook=self._object_pairs_hook)
 
 
@@ -102,22 +103,22 @@ class SerializedField(LongTextField):
 
     def db_value(self, value):
         if self._serialized_type == SerializedType.PICKLE:
-            return utils.serialize_b64(value, to_str=True)
+            return util.serialize_b64(value, to_str=True)
         elif self._serialized_type == SerializedType.JSON:
             if value is None:
                 return None
-            return utils.json_dumps(value, with_type=True)
+            return util.json_dumps(value, with_type=True)
         else:
             raise ValueError(
                 f"the serialized type {self._serialized_type} is not supported")
 
     def python_value(self, value):
         if self._serialized_type == SerializedType.PICKLE:
-            return utils.deserialize_b64(value)
+            return util.deserialize_b64(value)
         elif self._serialized_type == SerializedType.JSON:
             if value is None:
                 return {}
-            return utils.json_loads(
+            return util.json_loads(
                 value, object_hook=self._object_hook, object_pairs_hook=self._object_pairs_hook)
         else:
             raise ValueError(
@@ -204,7 +205,7 @@ class BaseModel(Model):
                             if isinstance(
                                     v, str) and f_n in auto_date_timestamp_field():
                                 # time type: %Y-%m-%d %H:%M:%S
-                                f_v[i] = utils.date_string_to_timestamp(v)
+                                f_v[i] = util.date_string_to_timestamp(v)
                         lt_value = f_v[0]
                         gt_value = f_v[1]
                         if lt_value is not None and gt_value is not None:
@@ -240,9 +241,9 @@ class BaseModel(Model):
     def insert(cls, __data=None, **insert):
         if isinstance(__data, dict) and __data:
             __data[cls._meta.combined["create_time"]
-            ] = utils.current_timestamp()
+            ] = util.current_timestamp()
         if insert:
-            insert["create_time"] = utils.current_timestamp()
+            insert["create_time"] = util.current_timestamp()
 
         return super().insert(__data, **insert)
 
@@ -254,20 +255,20 @@ class BaseModel(Model):
             return {}
 
         normalized[cls._meta.combined["update_time"]
-        ] = utils.current_timestamp()
+        ] = util.current_timestamp()
 
         for f_n in AUTO_DATE_TIMESTAMP_FIELD_PREFIX:
             if {f"{f_n}_time", f"{f_n}_date"}.issubset(cls._meta.combined.keys()) and \
                     cls._meta.combined[f"{f_n}_time"] in normalized and \
                     normalized[cls._meta.combined[f"{f_n}_time"]] is not None:
-                normalized[cls._meta.combined[f"{f_n}_date"]] = utils.timestamp_to_date(
+                normalized[cls._meta.combined[f"{f_n}_date"]] = util.timestamp_to_date(
                     normalized[cls._meta.combined[f"{f_n}_time"]])
 
         return normalized
 
 
 class JsonSerializedField(SerializedField):
-    def __init__(self, object_hook=utils.from_dict_hook,
+    def __init__(self, object_hook=util.from_dict_hook,
                  object_pairs_hook=None, **kwargs):
         super(JsonSerializedField, self).__init__(serialized_type=SerializedType.JSON, object_hook=object_hook,
                                                   object_pairs_hook=object_pairs_hook, **kwargs)
@@ -436,55 +437,27 @@ def fill_db_model_object(model_object, human_model_dict):
     return model_object
 
 
-class User(DataBaseModel, UserMixin):
-    id = CharField(max_length=32, primary_key=True)
-    access_token = CharField(max_length=255, null=True, index=True)
-    nickname = CharField(max_length=100, null=False, help_text="nicky name", index=True)
-    password = CharField(max_length=255, null=True, help_text="password", index=True)
-    email = CharField(
-        max_length=255,
-        null=False,
-        help_text="email",
-        index=True)
-    avatar = TextField(null=True, help_text="avatar base64 string")
-    language = CharField(
-        max_length=32,
-        null=True,
-        help_text="English|Chinese",
-        default="Chinese" if "zh_CN" in os.getenv("LANG", "") else "English",
-        index=True)
-    color_schema = CharField(
-        max_length=32,
-        null=True,
-        help_text="Bright|Dark",
-        default="Bright",
-        index=True)
-    timezone = CharField(
-        max_length=64,
-        null=True,
-        help_text="Timezone",
-        default="UTC+8\tAsia/Shanghai",
-        index=True)
-    last_login_time = DateTimeField(null=True, index=True)
-    is_authenticated = CharField(max_length=1, null=False, default="1", index=True)
-    is_active = CharField(max_length=1, null=False, default="1", index=True)
-    is_anonymous = CharField(max_length=1, null=False, default="0", index=True)
-    login_channel = CharField(null=True, help_text="from which user login", index=True)
-    status = CharField(
-        max_length=1,
-        null=True,
-        help_text="is it validate(0: wasted, 1: validate)",
-        default="1",
-        index=True)
-    is_superuser = BooleanField(null=True, help_text="is root", default=False, index=True)
-
-    def __str__(self):
-        return self.email
-
-    def get_id(self):
-        jwt = Serializer(secret_key=settings.SECRET_KEY)
-        return jwt.dumps(str(self.access_token))
-
+class User(DataBaseModel):
+    user_id = peewee.AutoField(primary_key=True)  # 自增主键‌:ml-citation{ref="2" data="citationList"}
+    user_name = peewee.CharField(unique=True, index=True)  # 唯一约束+索引‌:ml-citation{ref="2" data="citationList"}
+    email = peewee.CharField(null=True, index=True)  # 可空字段需显式声明‌:ml-citation{ref="2" data="citationList"}
+    phone_number = peewee.CharField(null=True, index=True)
+    dept_id = peewee.CharField(null=True, index=True)
+    remark = peewee.TextField(null=True)  # 长文本使用TextField‌:ml-citation{ref="1" data="citationList"}
+    delete = peewee.IntegerField(default=0)  # 默认值配置‌:ml-citation{ref="2" data="citationList"}
+    create_time = peewee.DateTimeField(
+        default=datetime.now,  # 应用层默认时间‌:ml-citation{ref="2" data="citationList"}
+        index=True,
+        constraints=[peewee.SQL('DEFAULT CURRENT_TIMESTAMP')]  # 数据库层默认值‌:ml-citation{ref="2,3" data="citationList"}
+    )
+    update_time = peewee.DateTimeField(
+        default=datetime.now,
+        constraints=[peewee.SQL('DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')]  # 更新时自动刷新‌:ml-citation{ref="2" data="citationList"}
+    )
+    role = peewee.CharField(null=True)
+    access_token = peewee.CharField(null=True)
+    web_menu = JSONField(null=True)  # 列表类型需用JSON字段‌:ml-citation{ref="4,5" data="citationList"}
+    admin_groups = JSONField(null=True)
     class Meta:
         db_table = "user"
 
@@ -982,6 +955,19 @@ class CanvasTemplate(DataBaseModel):
 
     class Meta:
         db_table = "canvas_template"
+class ChangeParserRequest(pydanticBaseModel):
+    doc_id: str
+    parser_id: str
+    parser_config: dict = {}
+class ParseRun(pydanticBaseModel):
+    doc_ids: List[str]      # 文档ID列表
+    run: int                # 操作序号
+    delete: bool            # 删除标志
+class ChunkBase(pydanticBaseModel):
+    doc_id: str
+    page: int
+    size: int
+    keywards: str
 
 
 def migrate_db():

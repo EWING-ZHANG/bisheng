@@ -18,7 +18,7 @@ from datetime import datetime
 import peewee
 
 from bisheng.api.db.db_models import DB
-from bisheng.api.utils import datetime_format, current_timestamp, get_uuid
+from bisheng.api.util import datetime_format, current_timestamp, get_uuid
 
 
 class CommonService:

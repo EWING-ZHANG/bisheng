@@ -3,12 +3,15 @@ from bisheng.api.v1 import (assistant_router, audit_router, chat_router, compone
                             endpoints_router, evaluation_router, finetune_router, flows_router,
                             group_router, knowledge_router, llm_router, mark_router, qa_router,
                             report_router, server_router, skillcenter_router, tag_router,
-                            user_router, validate_router, variable_router, workflow_router)
+                            user_router, validate_router, variable_router, workflow_router,kb_app_router,document_app_router,chunk_rag_router)
 from bisheng.api.v2 import (assistant_router_rpc, chat_router_rpc, flow_router,
                             knowledge_router_rpc, rpc_router_rpc, workflow_router_rpc)
 from fastapi import APIRouter
 
 router = APIRouter(prefix='/api/v1', )
+router.include_router(chunk_rag_router)
+router.include_router(document_app_router)
+router.include_router(kb_app_router)
 router.include_router(chat_router)
 router.include_router(endpoints_router)
 router.include_router(validate_router)

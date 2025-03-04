@@ -7,7 +7,7 @@ class OpenApiSchema:
 
     def __init__(self, contents: dict):
         self.contents = contents
-        self.version = contents['openapi']
+        self.version = "3.1.0"  # 将版本号写死
         self.info = contents['info']
         self.title = self.info['title']
         self.description = self.info.get('description', '')

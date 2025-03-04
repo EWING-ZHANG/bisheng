@@ -21,16 +21,16 @@ import time
 import uuid
 from copy import deepcopy
 
-from api.db import LLMType, UserTenantRole
-from api.db.db_models import init_database_tables as init_web_db, LLMFactories, LLM, TenantLLM
-from api.db.services import UserService
-from api.db.services.canvas_service import CanvasTemplateService
-from api.db.services.document_service import DocumentService
-from api.db.services.knowledgebase_service import KnowledgebaseService
-from api.db.services.llm_service import LLMFactoriesService, LLMService, TenantLLMService, LLMBundle
-from api.db.services.user_service import TenantService, UserTenantService
-from api import settings
-from api.utils.file_utils import get_project_base_directory
+from bisheng.api.db import LLMType, UserTenantRole
+from bisheng.api.db.db_models import init_database_tables as init_web_db, LLMFactories, LLM, TenantLLM
+from bisheng.api.services import UserService
+from bisheng.api.services.canvas_service import CanvasTemplateService
+from bisheng.api.services.document_service import DocumentService
+from bisheng.api.services.knowledgebase_service import KnowledgebaseService
+from bisheng.api.services.llm_service import LLMFactoriesService, LLMService, TenantLLMService, LLMBundle
+from bisheng.api.services.user_service import TenantService, UserTenantService
+from bisheng.api.db import settings
+from bisheng.api.util.file_utils import get_project_base_directory
 
 
 def encode_to_base64(input_string):

@@ -19,6 +19,10 @@ from bisheng.api.v1.usergroup import router as group_router
 from bisheng.api.v1.validate import router as validate_router
 from bisheng.api.v1.variable import router as variable_router
 from bisheng.api.v1.workflow import router as workflow_router
+from bisheng.api.v1.kb_app import router as kb_app_router
+from bisheng.api.v1.document_app import router as document_app_router
+from bisheng.api.v1.ragchunk_app import router as chunk_rag_router
+
 
 __all__ = [
     'chat_router',
@@ -42,4 +46,7 @@ __all__ = [
     'llm_router',
     'workflow_router',
     'mark_router',
+    'kb_app_router'
+    'document_app_router'
+    'chunk_rag_router'
 ]

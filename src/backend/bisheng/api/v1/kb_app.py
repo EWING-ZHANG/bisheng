@@ -3,18 +3,31 @@ from fastapi import (APIRouter, BackgroundTasks, Body, Depends, File, HTTPExcept
 from bisheng.api.services.user_service import UserPayload, get_login_user
 from bisheng.api.v1.schemas import (KnowledgeFileProcess, PreviewFileChunk, UnifiedResponseModel,
                                     UpdatePreviewFileChunk, UploadFileResponse, resp_200, resp_500)
-from bisheng.database.models import KnowledgeBaseBase
-from bisheng.api.services.knowledge_base import KnowledgeBaseService
-from bisheng.api.utils import get_data_error_result
-router = APIRouter(prefix='/kb', tags=['kb'])
+# from bisheng.database.models import KnowledgeBaseBase
+from bisheng.api.services.knowledgebase_service import KnowledgebaseService 
+from bisheng.api.util.api_utils import get_data_error_result,get_json_result,server_error_response
+from bisheng.api.constants import DATASET_NAME_LIMIT
+from bisheng.api.services import duplicate_name
+from bisheng.api.db import StatusEnum, FileSource
+from bisheng.api.util import get_uuid
+from bisheng.database.models.user import UserDao
+from bisheng.api import settings
+from typing import Dict, List, Optional
+from bisheng.api.services.document_service import DocumentService
+from bisheng.api.services.file2document_service import File2DocumentService
+from bisheng.api.services.file_service import FileService
+from bisheng.rag.nlp import search
+from bisheng.api.db.db_models import File
+# from bisheng.api.services.user_service import TenantService
+router = APIRouter(prefix='/kb', tags=['kb_app'])
 @router.post('/create', status_code=201)
-def create_knowledge(*,
+async def create_knowledge(*,
                      request: Request,
                      login_user: UserPayload = Depends(get_login_user),
-                     knowledge: KnowledgeBaseBase):
+                     name:str = Body(...,embed=True)):
     """ 创建知识库. """
-    req = request.json
-    dataset_name = req["name"]
+    req = await request.json()  
+    dataset_name = name
     if not isinstance(dataset_name, str):
         return get_data_error_result(message="Dataset name must be string.")
     if dataset_name == "":
@@ -24,38 +37,99 @@ def create_knowledge(*,
             message=f"Dataset name length is {len(dataset_name)} which is large than {DATASET_NAME_LIMIT}")
 
     dataset_name = dataset_name.strip()
-        dataset_name = duplicate_name(
+    dataset_name = duplicate_name(
         KnowledgebaseService.query,
         name=dataset_name,
-        tenant_id=current_user.id,
+        tenant_id=login_user.user_id,
         status=StatusEnum.VALID.value)
     try:
         req["id"] = get_uuid()
-        req["tenant_id"] = current_user.id
-        req["created_by"] = current_user.id
-        e, t = TenantService.get_by_id(current_user.id)
-        if not e:
-            return get_data_error_result(message="Tenant not found.")
-        req["embd_id"] = t.embd_id
+        req["tenant_id"] = login_user.user_id
+        req["created_by"] = login_user.user_id
+        req["name"] = dataset_name
+        # e, t = TenantService.get_by_id(current_user.id)
+        # if not e:
+        #     return get_data_error_result(message="Tenant not found.")
+        # req["embd_id"] = t.embd_id
         if not KnowledgebaseService.save(**req):
             return get_data_error_result()
         return get_json_result(data={"kb_id": req["id"]})
     except Exception as e:
         return server_error_response(e)
-def duplicate_name(query_func, **kwargs):
-    fnm = kwargs["name"]
-    objs = query_func(**kwargs)
-    if not objs: return fnm
-    ext = pathlib.Path(fnm).suffix #.jpg
-    nm = re.sub(r"%s$"%ext, "", fnm)
-    r = re.search(r"\(([0-9]+)\)$", nm)
-    c = 0
-    if r:
-        c = int(r.group(1))
-        nm = re.sub(r"\([0-9]+\)$", "", nm)
-    c += 1
-    nm = f"{nm}({c})"
-    if ext: nm += f"{ext}"
+@router.get('/detail', status_code=201)
+async def detail(kb_id: str,login_user: UserPayload = Depends(get_login_user)):
+    try:
+        user = UserDao.get_user(login_user.user_id)
+        if not user:
+            if not KnowledgebaseService.query(
+                    tenant_id=login_user.user_id, id=kb_id):
+                return get_json_result(
+                data=False, message='Only owner of knowledgebase authorized for this operation.',
+                code="settings.RetCode.OPERATING_ERROR")
 
-    kwargs["name"] = nm
-    return duplicate_name(query_func, **kwargs)
+        # else:
+        #     return get_json_result(
+        #         data=False, message='Only owner of knowledgebase authorized for this operation.',
+        #         code=settings.RetCode.OPERATING_ERROR)
+        kb = KnowledgebaseService.get_detail(kb_id)
+        if not kb:
+            return get_data_error_result(
+                message="Can't find this knowledgebase!")
+        return get_json_result(data=kb)
+    except Exception as e:
+        return server_error_response(e)
+@router.get('/list', status_code=200)
+async def list_kbs(
+    keywords: Optional[str] = Query(default=""),
+    page_number: int = Query(default=1, alias="page"),
+    items_per_page: int = Query(default=150, alias="page_size"),
+    orderby: str = Query(default="create_time", alias="orderby"),
+    desc: bool = Query(default=True),
+    login_user: UserPayload = Depends(get_login_user)  # 认证依赖注入[1][4]
+):
+        tenants =[{"tenant_id":login_user.user_id}] # 类似java中的list列表 然后每个对象就是里面的字典
+        try:
+            kbs, total = KnowledgebaseService.get_by_tenant_ids(
+                [m["tenant_id"] for m in tenants], login_user.user_id, page_number, items_per_page, orderby, desc, keywords)
+            return get_json_result(data={"kbs": kbs, "total": total})
+        except Exception as e:
+            return server_error_response(e)
+@router.post('/rm',status_code=200)
+def rm(kb_id:str,
+        login_user: UserPayload = Depends(get_login_user)):
+    if not KnowledgebaseService.accessible4deletion(kb_id, login_user.user_id):
+        return get_json_result(
+            data=False,
+            message='No authorization.',
+            code=settings.RetCode.AUTHENTICATION_ERROR
+        )
+    try:
+        kbs = KnowledgebaseService.query(
+        created_by=login_user.user_id, id=kb_id)
+        if not kbs:
+            return get_json_result(
+                data=False, message='Only owner of knowledgebase authorized for this operation.',
+                code=settings.RetCode.OPERATING_ERROR)
+
+        for doc in DocumentService.query(kb_id):
+            if not DocumentService.remove_document(doc, kbs[0].tenant_id):
+                return get_data_error_result(
+                    message="Database error (Document removal)!")
+            f2d = File2DocumentService.get_by_document_id(doc.id)
+            FileService.filter_delete([File.source_type == FileSource.KNOWLEDGEBASE, File.id == f2d[0].file_id])
+            File2DocumentService.delete_by_document_id(doc.id)
+        FileService.filter_delete(
+            [File.source_type == FileSource.KNOWLEDGEBASE, File.type == "folder", File.name == kbs[0].name])
+        if not KnowledgebaseService.delete_by_id(kb_id):
+            return get_data_error_result(
+                message="Database error (Knowledgebase removal)!")
+        for kb in kbs:
+            settings.docStoreConn.delete({"kb_id": kb.id}, search.index_name(kb.tenant_id), kb.id)
+            settings.docStoreConn.deleteIdx(search.index_name(kb.tenant_id), kb.id)
+        return get_json_result(data=True)
+    except Exception as e:
+        return server_error_response(e)
+    
+
+
+

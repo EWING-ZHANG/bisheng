@@ -268,7 +268,7 @@ async def load_flow_from_json(flow: Union[Path, str, dict],
     graph_data = flow_graph['data']
     if tweaks is not None:
         graph_data = process_tweaks(graph_data, tweaks)
-    from bisheng.api.utils import build_flow_no_yield
+    from bisheng.api.util import build_flow_no_yield
     graph = await build_flow_no_yield(graph_data=graph_data,
                                       artifacts={},
                                       process_file=True,

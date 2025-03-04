@@ -18,9 +18,9 @@ from functools import reduce
 
 from playhouse.pool import PooledMySQLDatabase
 
-from api.utils import current_timestamp, timestamp_to_date
+from bisheng.api.util import current_timestamp, timestamp_to_date
 
-from api.db.db_models import DB, DataBaseModel
+from bisheng.api.db.db_models import DB, DataBaseModel
 
 
 @DB.connection_context()

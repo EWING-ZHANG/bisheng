@@ -14,10 +14,11 @@
 #  limitations under the License.
 #
 from bisheng.api.db import StatusEnum, TenantPermission
-from bisheng.api.db.db_models import Knowledgebase, DB, Tenant, User, UserTenant,Document
+from bisheng.api.db.db_models import Knowledgebase, DB, Tenant, UserTenant,Document
+from bisheng.api.db.db_models import User 
 from bisheng.api.services.common_service import CommonService
 from peewee import fn
-
+from peewee import JOIN, SQL
 
 class KnowledgebaseService(CommonService):
     model = Knowledgebase
@@ -48,25 +49,43 @@ class KnowledgebaseService(CommonService):
             cls.model.chunk_num,
             cls.model.parser_id,
             cls.model.embd_id,
-            User.nickname,
-            User.avatar.alias('tenant_avatar'),
-            cls.model.update_time
+            cls.model.tenant_id,
+            User.user_name,
+            User.user_id,
+            #   User.avatar.alias('tenant_avatar'),
+             cls.model.update_time
         ]
+
+        # Todo permission 
         if keywords:
-            kbs = cls.model.select(*fields).join(User, on=(cls.model.tenant_id == User.id)).where(
-                ((cls.model.tenant_id.in_(joined_tenant_ids) & (cls.model.permission ==
-                                                                TenantPermission.TEAM.value)) | (
-                    cls.model.tenant_id == user_id))
-                & (cls.model.status == StatusEnum.VALID.value),
+            kbs = (cls.model.select(*fields)
+           .join(User, JOIN.LEFT_OUTER, on=(cls.model.tenant_id == User.user_id))  # 明确指定JOIN类型
+           .where(
+                ((cls.model.tenant_id.in_(joined_tenant_ids) & 
+                  (cls.model.permission == TenantPermission.TEAM.value)) | 
+                 (cls.model.tenant_id == user_id)) & 
+                (cls.model.status == StatusEnum.VALID.value),
                 (fn.LOWER(cls.model.name).contains(keywords.lower()))
-            )
+           ))
         else:
-            kbs = cls.model.select(*fields).join(User, on=(cls.model.tenant_id == User.id)).where(
-                ((cls.model.tenant_id.in_(joined_tenant_ids) & (cls.model.permission ==
-                                                                TenantPermission.TEAM.value)) | (
-                    cls.model.tenant_id == user_id))
-                & (cls.model.status == StatusEnum.VALID.value)
-            )
+            kbs = (
+                    cls.model.select(*fields)
+                    .join(
+                        User,
+                        JOIN.LEFT_OUTER,
+                        on=(cls.model.tenant_id == User.user_id)  # CAST语法
+                    )
+                    .where(
+                        (
+                            (cls.model.tenant_id.in_(joined_tenant_ids)) &
+                            (cls.model.permission == TenantPermission.TEAM.value)
+                        ) |
+                        (
+                            (cls.model.tenant_id == str(user_id)) &
+                            (cls.model.status == StatusEnum.VALID.value)
+                        )
+                    )
+                )
         if desc:
             kbs = kbs.order_by(cls.model.getter_by(orderby).desc())
         else:
@@ -106,11 +125,12 @@ class KnowledgebaseService(CommonService):
             cls.model.parser_id,
             cls.model.parser_config,
             cls.model.pagerank]
-        kbs = cls.model.select(*fields).join(Tenant, on=(
-                (Tenant.id == cls.model.tenant_id) & (Tenant.status == StatusEnum.VALID.value))).where(
-            (cls.model.id == kb_id),
-            (cls.model.status == StatusEnum.VALID.value)
-        )
+        kbs = cls.model.select(*fields)
+        # .join(Tenant, on=(
+        #         (Tenant.id == cls.model.tenant_id) & (Tenant.status == StatusEnum.VALID.value))).where(
+        #     (cls.model.id == kb_id),
+        #     (cls.model.status == StatusEnum.VALID.value)
+        # )
         if not kbs:
             return
         d = kbs[0].to_dict()

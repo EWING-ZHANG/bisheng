@@ -40,6 +40,7 @@ from bisheng.api.services.common_service import CommonService
 from bisheng.api.services.knowledgebase_service import KnowledgebaseService
 from bisheng.api.db import StatusEnum
 from bisheng.rag.utils.redis_conn import REDIS_CONN
+from bisheng.api.services.user_service_rag import TenantService, UserTenantService
 
 
 class DocumentService(CommonService):
@@ -423,11 +424,11 @@ def queue_raptor_tasks(doc):
 
 
 def doc_upload_and_parse(conversation_id, file_objs, user_id):
-    from rag.app import presentation, picture, naive, audio, email
-    from api.db.services.dialog_service import ConversationService, DialogService
-    from api.db.services.file_service import FileService
-    from api.db.services.llm_service import LLMBundle
-    from api.db.services.api_service import API4ConversationService
+    from bisheng.rag.app import presentation, picture, naive, email
+    from bisheng.services.dialog_service import ConversationService, DialogService
+    from bisheng.api.services.file_service import FileService
+    from bisheng.api.services.llm_service import LLMBundle
+    from bisheng.api.services.api_service import API4ConversationService
 
     e, conv = ConversationService.get_by_id(conversation_id)
     if not e:
@@ -451,7 +452,7 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
     FACTORY = {
         ParserType.PRESENTATION.value: presentation,
         ParserType.PICTURE.value: picture,
-        ParserType.AUDIO.value: audio,
+        # ParserType.AUDIO.value: audio,
         ParserType.EMAIL.value: email
     }
     parser_config = {"chunk_token_num": 4096, "delimiter": "\n!?;。；！？", "layout_recognize": False}

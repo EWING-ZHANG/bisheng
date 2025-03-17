@@ -98,7 +98,7 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
                     serialized.get('name'), input_str)
 
         resp = ChatResponse(type='stream',
-                            intermediate_steps=f'Tool input: {input_str}',
+                            # intermediate_steps=f'Tool input: {input_str}',
                             flow_id=self.flow_id,
                             chat_id=self.chat_id)
         await self.websocket.send_json(resp.dict())
@@ -107,17 +107,17 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         """Run when tool ends running."""
         logger.debug(f'on_tool_end  output={output} kwargs={kwargs}')
         logger.info("k=s act=on_tool_end flow_id={} output='{}'", self.flow_id, output)
-        observation_prefix = kwargs.get('observation_prefix', 'Tool output: ')
+        # observation_prefix = kwargs.get('observation_prefix', 'Tool output: ')
         # from langchain.docstore.document import Document # noqa
         # result = eval(output).get('result')
         result = output
 
         # Create a formatted message.
-        intermediate_steps = f'{observation_prefix}{result[:100]}'
+        # intermediate_steps = f'{observation_prefix}{result[:100]}'
 
         # Create a ChatResponse instance.
         resp = ChatResponse(type='stream',
-                            intermediate_steps=intermediate_steps,
+                            # intermediate_steps=intermediate_steps,
                             flow_id=self.flow_id,
                             chat_id=self.chat_id)
 
@@ -318,17 +318,17 @@ class StreamingLLMCallbackHandler(BaseCallbackHandler):
 
     def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running."""
-        observation_prefix = kwargs.get('observation_prefix', 'Tool output: ')
+        # observation_prefix = kwargs.get('observation_prefix', 'Tool output: ')
 
         # from langchain.docstore.document import Document # noqa
         # result = eval(output).get('result')
         result = output
         # Create a formatted message.
-        intermediate_steps = f'{observation_prefix}{result}'
+        # intermediate_steps = f'{observation_prefix}{result}'
 
         # Create a ChatResponse instance.
         resp = ChatResponse(type='stream',
-                            intermediate_steps=intermediate_steps,
+                            # intermediate_steps=intermediate_steps,
                             flow_id=self.flow_id,
                             chat_id=self.chat_id)
 
@@ -488,11 +488,11 @@ class AsyncGptsDebugCallbackHandler(AsyncGptsLLMCallbackHandler):
     async def on_tool_end(self, output: str, **kwargs: Any) -> Any:
         """Run when tool ends running."""
         logger.debug(f'on_tool_end output={output} kwargs={kwargs}')
-        observation_prefix = kwargs.get('observation_prefix', 'Tool output: ')
+        # observation_prefix = kwargs.get('observation_prefix', 'Tool output: ')
 
         result = output
         # Create a formatted message.
-        intermediate_steps = f'{observation_prefix}\n\n{result}'
+        # intermediate_steps = f'{observation_prefix}\n\n{result}'
         tool_name, tool_category = self.parse_tool_category(kwargs.get('name'))
 
         # Create a ChatResponse instance.
@@ -537,7 +537,7 @@ class AsyncGptsDebugCallbackHandler(AsyncGptsLLMCallbackHandler):
             output_info.update(input_info['input'])
             resp = ChatResponse(type='end',
                                 category=input_info['category'],
-                                intermediate_steps='\n\nTool output:\n\n  Error: ' + str(error),
+                                # intermediate_steps='\n\nTool output:\n\n  Error: ' + str(error),
                                 message=json.dumps(output_info, ensure_ascii=False),
                                 flow_id=self.flow_id,
                                 chat_id=self.chat_id,
@@ -555,8 +555,8 @@ class AsyncGptsDebugCallbackHandler(AsyncGptsLLMCallbackHandler):
                 ChatMessageModel(
                     is_bot=1,
                     message=json.dumps(output_info),
-                    intermediate_steps=f'{input_info["steps"]}\n\nTool output:\n\n  Error: ' +
-                    str(error),
+                    # intermediate_steps=f'{input_info["steps"]}\n\nTool output:\n\n  Error: ' +
+                    # str(error),
                     category=tool_category,
                     type='end',
                     flow_id=self.flow_id,

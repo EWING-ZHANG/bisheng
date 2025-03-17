@@ -200,7 +200,8 @@ class AssistantAgent(AssistantUtils):
         初始化知识库工具
         """
         embeddings = decide_embeddings(knowledge.model)
-        vector_client = decide_vectorstores(knowledge.collection_name, 'Milvus', embeddings)
+        # edited 替换milvus 为ElasticKeywordsSearch
+        vector_client = decide_vectorstores(knowledge.collection_name, 'ElasticKeywordsSearch', embeddings)
         if isinstance(vector_client, VectorStoreRetriever):
             vector_client = vector_client.vectorstore
         vector_client.partition_key = knowledge.id
@@ -276,7 +277,7 @@ class AssistantAgent(AssistantUtils):
         if tool_ids:
             tools = self.init_tools_by_toolid(tool_ids, self.llm, callbacks)
 
-        # flow + knowledge
+        # flow + knowledge 拿到了AssistantLink后本质还是去根据id查询知识库的信息
         flow_data = FlowDao.get_flow_by_ids([link.flow_id for link in flow_links if link.flow_id])
         knowledge_data = KnowledgeDao.get_list_by_ids(
             [link.knowledge_id for link in flow_links if link.knowledge_id])
@@ -285,6 +286,7 @@ class AssistantAgent(AssistantUtils):
 
         for link in flow_links:
             knowledge_id = link.knowledge_id
+            # todo 必须进行初始化init_knowledge_tool才能使用吗?? 
             if knowledge_id:
                 knowledge_tool = await self.init_knowledge_tool(knowledge_data[knowledge_id],
                                                                 callbacks)

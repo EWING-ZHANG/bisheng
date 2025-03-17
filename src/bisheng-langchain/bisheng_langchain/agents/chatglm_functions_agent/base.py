@@ -164,13 +164,13 @@ class ChatglmFunctionsAgent(BaseSingleActionAgent):
         if self.history[-1]['metadata'] and len(self.history[-1]['metadata']) > 0:
             metadata = self.history[-1]['metadata']
             content = self.history[-1]['content']
-            if 'tool_call' in content:
-                for tool in tool_names:
-                    if tool in metadata:
-                        input_para = content.split("='")[-1].split("'")[0]
-                        action_json = {'action': tool, 'action_input': input_para}
-                        self.has_search = True
-                        return f"""
+            # if 'tool_call' in content:
+            #     for tool in tool_names:
+            #         if tool in metadata:
+            #             input_para = content.split("='")[-1].split("'")[0]
+            #             action_json = {'action': tool, 'action_input': input_para}
+            #             self.has_search = True
+            #             return f"""
 Action:
 ```
 {json.dumps(action_json, ensure_ascii=False)}

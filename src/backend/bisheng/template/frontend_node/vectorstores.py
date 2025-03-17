@@ -269,9 +269,9 @@ class VectorStoreFrontendNode(FrontendNode):
                     advanced=False,
                     multiline=False,
                     value={
-                        'es_url': 'http://bisheng-es:9200',
+                        'es_url': 'http://127.0.0.1:1200',
                         'es_user': 'elastic',
-                        'es_password': ''
+                        'es_password': 'infini_rag_flow'
                     },
                 ))
             extra_fields.append(

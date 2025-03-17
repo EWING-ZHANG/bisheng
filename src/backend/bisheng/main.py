@@ -23,8 +23,7 @@ from loguru import logger
 import debugpy
 from bisheng.api import settings as ragflowSettings
 
-# 启动调试代理并监听端口 5677
-debugpy.listen(('0.0.0.0', 5670))
+debugpy.listen(('0.0.0.0', 5678))
 print("Waiting for debugger to attach...")
 # 等待调试器连接
 debugpy.wait_for_client() 
@@ -162,12 +161,29 @@ def set_pythonpath():
 app = create_app()
 def run_workers():
     script_path = "/home/ewing/newProject/bisheng/docker/launch_backend_service.sh"
-    subprocess.run(["/bin/bash", script_path])
+    subprocess.Popen(["/bin/bash", script_path])
+import time
+from bisheng.api.services.document_service import DocumentService
+import logging
+from concurrent.futures import ThreadPoolExecutor
+
+def update_progress():
+    while True:
+        time.sleep(3)
+        try:
+            DocumentService.update_progress()
+        except Exception:
+            logging.exception("update_progress exception")
 if __name__ == '__main__':
     import uvicorn
     # 设置python环境
     set_pythonpath()
-    run_workers()
-     ragflowSettings.init_settings()
+    
+    ragflowSettings.init_settings()
     # 直接执行shell脚本
+    run_workers()
+    thread = ThreadPoolExecutor(max_workers=1)
+    thread.submit(update_progress)
+
     uvicorn.run(app, host='0.0.0.0', port=7860, workers=1)
+

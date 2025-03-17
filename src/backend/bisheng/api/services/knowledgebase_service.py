@@ -112,7 +112,7 @@ class KnowledgebaseService(CommonService):
     def get_detail(cls, kb_id):
         fields = [
             cls.model.id,
-            # Tenant.embd_id,
+            Tenant.embd_id,
             cls.model.embd_id,
             cls.model.avatar,
             cls.model.name,
@@ -125,12 +125,11 @@ class KnowledgebaseService(CommonService):
             cls.model.parser_id,
             cls.model.parser_config,
             cls.model.pagerank]
-        kbs = cls.model.select(*fields)
-        # .join(Tenant, on=(
-        #         (Tenant.id == cls.model.tenant_id) & (Tenant.status == StatusEnum.VALID.value))).where(
-        #     (cls.model.id == kb_id),
-        #     (cls.model.status == StatusEnum.VALID.value)
-        # )
+        kbs = cls.model.select(*fields).join(Tenant, on=(
+                (Tenant.id == cls.model.tenant_id) & (Tenant.status == StatusEnum.VALID.value))).where(
+            (cls.model.id == kb_id),
+            (cls.model.status == StatusEnum.VALID.value)
+        )
         if not kbs:
             return
         d = kbs[0].to_dict()

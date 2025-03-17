@@ -21,12 +21,7 @@ import logging
 import sys
 import os
 
-from bisheng.api.util.log_utils import initRootLogger
 
-CONSUMER_NO = "0" if len(sys.argv) < 2 else sys.argv[1]
-CONSUMER_NAME = "task_executor_" + CONSUMER_NO
-LOG_LEVELS = os.environ.get("LOG_LEVELS", "")
-initRootLogger(CONSUMER_NAME, LOG_LEVELS)
 
 from datetime import datetime
 import json
@@ -42,9 +37,7 @@ from io import BytesIO
 from multiprocessing.context import TimeoutError
 from timeit import default_timer as timer
 import tracemalloc
-
 import numpy as np
-
 from bisheng.api.db import LLMType, ParserType
 from bisheng.services.dialog_service import keyword_extraction, question_proposal
 from bisheng.api.services.document_service import DocumentService
@@ -54,14 +47,21 @@ from bisheng.api.services.file2document_service import File2DocumentService
 from bisheng.api import settings
 from bisheng.api.versions import get_ragflow_version
 from bisheng.api.db.db_models import close_connection
-from bisheng.rag.app import laws, paper, presentation, manual, qa, table, book, resume, picture, naive, one, audio, \
-    knowledge_graph, email
+# from bisheng.rag.app import laws, paper, presentation, manual, qa, table, book, resume, picture, naive, one, audio, \
+    # knowledge_graph, email
+from bisheng.rag.app import qa,resume,naive,table,presentation,paper,picture,book,laws,email,one,manual
 from bisheng.rag.nlp import search, rag_tokenizer
 from bisheng.rag.utils.raptor import RecursiveAbstractiveProcessing4TreeOrganizedRetrieval as Raptor
 from bisheng.rag.settings import DOC_MAXIMUM_SIZE, SVR_QUEUE_NAME, print_rag_settings
 from bisheng.rag.utils import rmSpace, num_tokens_from_string
 from bisheng.rag.utils.redis_conn import REDIS_CONN, Payload
 from bisheng.rag.utils.storage_factory import STORAGE_IMPL
+from bisheng.api.util.log_utils import initRootLogger
+
+CONSUMER_NO = "0" if len(sys.argv) < 2 else sys.argv[1]
+CONSUMER_NAME = "task_executor_" + CONSUMER_NO
+LOG_LEVELS = os.environ.get("LOG_LEVELS", "")
+initRootLogger(CONSUMER_NAME, LOG_LEVELS)
 
 BATCH_SIZE = 64
 
@@ -78,9 +78,9 @@ FACTORY = {
     ParserType.RESUME.value: resume,
     ParserType.PICTURE.value: picture,
     ParserType.ONE.value: one,
-    ParserType.AUDIO.value: audio,
-    ParserType.EMAIL.value: email,
-    ParserType.KG.value: knowledge_graph
+    # ParserType.AUDIO.value: audio,
+    # ParserType.EMAIL.value: email,
+    # ParserType.KG.value: knowledge_graph
 }
 
 CONSUMER_NAME = "task_consumer_" + CONSUMER_NO
@@ -309,12 +309,12 @@ def embedding(docs, mdl, parser_config=None, callback=None):
              cnts) if len(tts) == len(cnts) else cnts
 
     assert len(vects) == len(docs)
-    vector_size = 0
+    # vector_size = 0
     for i, d in enumerate(docs):
         v = vects[i].tolist()
-        vector_size = len(v)
+        # vector_size = len(v)
         d["q_%d_vec" % len(v)] = v
-    return tk_count, vector_size
+    return tk_count, 3027
 
 
 def run_raptor(row, chat_mdl, embd_mdl, callback=None):

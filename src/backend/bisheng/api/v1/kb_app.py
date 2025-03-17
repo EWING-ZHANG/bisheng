@@ -17,8 +17,8 @@ from bisheng.api.services.document_service import DocumentService
 from bisheng.api.services.file2document_service import File2DocumentService
 from bisheng.api.services.file_service import FileService
 from bisheng.rag.nlp import search
-from bisheng.api.db.db_models import File
-# from bisheng.api.services.user_service import TenantService
+from bisheng.api.db.db_models import File,KnowledgeUpdateRequest
+from bisheng.api.services.user_service_rag import TenantService, UserTenantService
 router = APIRouter(prefix='/kb', tags=['kb_app'])
 @router.post('/create', status_code=201)
 async def create_knowledge(*,
@@ -47,16 +47,16 @@ async def create_knowledge(*,
         req["tenant_id"] = login_user.user_id
         req["created_by"] = login_user.user_id
         req["name"] = dataset_name
-        # e, t = TenantService.get_by_id(current_user.id)
-        # if not e:
-        #     return get_data_error_result(message="Tenant not found.")
-        # req["embd_id"] = t.embd_id
+        e, t = TenantService.get_by_id(login_user.user_id)
+        if not e:
+            return get_data_error_result(message="Tenant not found.")
+        req["embd_id"] = t.embd_id
         if not KnowledgebaseService.save(**req):
             return get_data_error_result()
         return get_json_result(data={"kb_id": req["id"]})
     except Exception as e:
         return server_error_response(e)
-@router.get('/detail', status_code=201)
+@router.get('/detail', status_code=200)
 async def detail(kb_id: str,login_user: UserPayload = Depends(get_login_user)):
     try:
         user = UserDao.get_user(login_user.user_id)
@@ -94,7 +94,7 @@ async def list_kbs(
             return get_json_result(data={"kbs": kbs, "total": total})
         except Exception as e:
             return server_error_response(e)
-@router.post('/rm',status_code=200)
+@router.get('/rm', status_code=200)
 def rm(kb_id:str,
         login_user: UserPayload = Depends(get_login_user)):
     if not KnowledgebaseService.accessible4deletion(kb_id, login_user.user_id):
@@ -129,7 +129,55 @@ def rm(kb_id:str,
         return get_json_result(data=True)
     except Exception as e:
         return server_error_response(e)
-    
+@router.post('/update', status_code=200)
+def update(req: KnowledgeUpdateRequest,
+           login_user: UserPayload = Depends(get_login_user)):
+    req = req.dict()
+    req["name"] = req["name"].strip()
+    if not KnowledgebaseService.accessible4deletion(req["kb_id"], login_user.user_id):
+        return get_json_result(
+            data=False,
+            message='No authorization.',
+            code=settings.RetCode.AUTHENTICATION_ERROR
+        )
+    try:
+        if not KnowledgebaseService.query(
+                created_by=login_user.user_id, id=req["kb_id"]):
+            return get_json_result(
+                data=False, message='Only owner of knowledgebase authorized for this operation.',
+                code=settings.RetCode.OPERATING_ERROR)
+
+        e, kb = KnowledgebaseService.get_by_id(req["kb_id"])
+        if not e:
+            return get_data_error_result(
+                message="Can't find this knowledgebase!")
+
+        if req["name"].lower() != kb.name.lower() \
+                and len(
+            KnowledgebaseService.query(name=req["name"], tenant_id=login_user.user_id, status=StatusEnum.VALID.value)) > 1:
+            return get_data_error_result(
+                message="Duplicated knowledgebase name.")
+
+        del req["kb_id"]
+        if not KnowledgebaseService.update_by_id(kb.id, req):
+            return get_data_error_result()
+
+        if kb.pagerank != req.get("pagerank", 0):
+            if req.get("pagerank", 0) > 0:
+                settings.docStoreConn.update({"kb_id": kb.id}, {"pagerank_fea": req["pagerank"]},
+                                         search.index_name(kb.tenant_id), kb.id)
+            else:
+                settings.docStoreConn.update({"exist": "pagerank_fea"}, {"remove": "pagerank_fea"},
+                                         search.index_name(kb.tenant_id), kb.id)
+
+        e, kb = KnowledgebaseService.get_by_id(kb.id)
+        if not e:
+            return get_data_error_result(
+                message="Database error (Knowledgebase rename)!")
+
+        return get_json_result(data=kb.to_json())
+    except Exception as e:
+        return server_error_response(e)
 
 
 

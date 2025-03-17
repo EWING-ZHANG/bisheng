@@ -9,8 +9,10 @@ from bisheng.api.services.document_service import DocumentService
 from bisheng.api.constants import IMG_BASE64_PREFIX
 from fastapi.responses import JSONResponse
 from fastapi import Form
+from fastapi.responses import StreamingResponse  # 新增StreamingResponse
+
 from bisheng.api.services.file_service import FileService
-from bisheng.api.db.db_models import DB,Task,ChangeParserRequest,ParseRun,ChunkBase
+from bisheng.api.db.db_models import DB,Task,ChangeParserRequest,ParseRun,ChunkBase,DocStatus,docRm
 from bisheng.api.util import get_uuid
 from bisheng.api.db import FileType, TaskStatus, ParserType, FileSource
 from bisheng.rag.nlp import search
@@ -21,6 +23,7 @@ import re
 import mimetypes
 from bisheng.api.services.task_service import TaskService, queue_tasks
 from fastapi import File, UploadFile
+from urllib.parse import quote  # 新增引用
 
 
 router = APIRouter(prefix='/document', tags=['document_app'])
@@ -159,11 +162,11 @@ def thumbnails(doc_ids:str,
     except Exception as e:
         return server_error_response(e)
 @router.post('/change_status',status_code=200)
-def change_status(
-                doc_id: str,
-                status: str,
+def change_status(req: DocStatus,
                 login_user: UserPayload = Depends(get_login_user)  # 认证依赖注入[1][4]
 ):
+    status=req.status
+    doc_id=req.doc_id
     if str(status) not in ["0", "1"]:
         return get_json_result(
             data=False,
@@ -196,11 +199,11 @@ def change_status(
         return get_json_result(data=True)
     except Exception as e:
         return server_error_response(e)   
-@router.post('/rm',status_code=200)
-def rm(doc_id:str,
+@router.post('/rm')
+def rm(doc_ids:docRm,
         login_user: UserPayload = Depends(get_login_user)):
-    if isinstance(doc_id, str): doc_ids = [doc_id]
-
+    # if isinstance(doc_id, str): doc_ids = [doc_id]
+    doc_ids = doc_ids.doc_ids
     for doc_id in doc_ids:
         if not DocumentService.accessible4deletion(doc_id, login_user.user_id):
             return get_json_result(
@@ -228,8 +231,8 @@ def rm(doc_id:str,
                 return get_data_error_result(
                     message="Database error (Document removal)!")
 
-            f2d = File2DocumentService.get_by_document_id(doc_id)
-            FileService.filter_delete([File.source_type == FileSource.KNOWLEDGEBASE, File.id == f2d[0].file_id])
+            # f2d = File2DocumentService.get_by_document_id(doc_id)
+            # FileService.filter_delete([File.source_type == FileSource.KNOWLEDGEBASE, File.id == f2d[0].file_id])
             File2DocumentService.delete_by_document_id(doc_id)
 
             STORAGE_IMPL.rm(b, n)
@@ -280,24 +283,55 @@ def rename(doc_id:str,
     except Exception as e:
         return server_error_response(e)
 @router.get('/get/{doc_id}',status_code=200)
-def get(doc_id:str):
+async def get_document(doc_id: str) -> Response:
     try:
-        e, doc = DocumentService.get_by_id(doc_id)
-        if not e:
-            return get_data_error_result(message="Document not found!")
+        # 获取文档元数据
+        exists, doc = DocumentService.get_by_id(doc_id)
+        if not exists:
+            raise HTTPException(status_code=404, detail="Document not found")
 
-        b, n = File2DocumentService.get_storage_address(doc_id=doc_id)
-        file_data = STORAGE_IMPL.get(b, n)  # 获取二进制数据
-        response = Response(content=file_data)
-        # 设置Content-Type
-        mime_type, _ = mimetypes.guess_type(doc.name)
-        response.media_type = mime_type or "application/octet-stream"
+        # 获取存储位置信息
+        bucket_name, object_name = File2DocumentService.get_storage_address(doc_id=doc_id)
         
-        # 设置下载提示（可选）
-        response.headers["Content-Disposition"] = f'attachment; filename="{doc.name}"'
-        return response
+        # 使用原有的同步get方法获取字节数据
+        file_bytes = STORAGE_IMPL.get(bucket_name, object_name)  # 确保返回bytes类型
+        
+        # 精确识别MIME类型
+        mime_type, _ = mimetypes.guess_type(doc.name)
+        if not mime_type:
+            # 根据文档类型回退
+            mime_type = "image/jpeg" if doc.type == FileType.VISUAL.value else "application/octet-stream"
+        
+        # 处理特殊字符文件名
+        safe_filename = quote(doc.name)
+        content_disposition = f"inline; filename*=UTF-8''{safe_filename}"
+
+        return Response(
+            content=file_bytes,
+            media_type=mime_type,
+            headers={
+                "Content-Disposition": content_disposition,
+                "Content-Length": str(len(file_bytes))  # 添加实际内容长度
+            }
+        )
+    
     except Exception as e:
-        return server_error_response(e)
+        # 细化错误处理
+        if isinstance(e, AttributeError) and "'get'" in str(e):
+            raise HTTPException(
+                status_code=500,
+                detail="Storage service configuration error"
+            )
+        elif isinstance(e, ConnectionError):
+            raise HTTPException(
+                status_code=503,
+                detail="Storage service unavailable"
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Document retrieval failed: {str(e)}"
+            )
 @router.get('/image/{image_id}', status_code=200)
 def get_image(image_id: str):
     try:
@@ -391,7 +425,7 @@ def run(req: ParseRun=Body(...),
                 info["token_num"] = 0
             DocumentService.update_by_id(id, info)
             # if str(req.run) == TaskStatus.CANCEL.value:
-            tenant_id = DocumentService.get_tenant_id(id)
+            tenant_id = login_user.user_id
             if not tenant_id:
                 return get_data_error_result(message="Tenant not found!")
             e, doc = DocumentService.get_by_id(id)

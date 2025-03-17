@@ -28,7 +28,7 @@ EmbeddingModel = {
     "Xinference": XinferenceEmbed,
     "Tongyi-Qianwen": QWenEmbed,
     "ZHIPU-AI": ZhipuEmbed,
-    "FastEmbed": FastEmbed,
+    # "FastEmbed": FastEmbed,
     "Youdao": YoudaoEmbed,
     "BaiChuan": BaiChuanEmbed,
     "Jina": JinaEmbed,

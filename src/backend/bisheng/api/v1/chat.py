@@ -417,8 +417,6 @@ def get_online_chat(*,
     data, _ = WorkFlowService.get_all_flows(user, keyword, FlowStatus.ONLINE.value, tag_id, None, page, limit)
     return resp_200(data=data)
 
-# 点击对话 进行对技能进行对话的初始化  建立websocket连接
-# 前端什么时候将内容传递给后端？
 @router.websocket('/chat/{flow_id}')
 async def chat(
         *,

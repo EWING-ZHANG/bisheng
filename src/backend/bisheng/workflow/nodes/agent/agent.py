@@ -274,13 +274,13 @@ class AgentNode(BaseNode):
                     tool_invoke_info[one['run_id']].update({
                         'output': f'Error: {one["error"]}'
                     })
-        if tool_invoke_info:
-            for one in tool_invoke_info.values():
-                ret.append({
-                    "key": one["name"],
-                    "value": f"Tool Input:\n {one['input']}, Tool Output:\n {one['output']}",
-                    "type": "tool"
-                })
+        # if tool_invoke_info:
+        #     for one in tool_invoke_info.values():
+        #         ret.append({
+        #             "key": one["name"],
+        #             "value": f"Tool Input:\n {one['input']}, Tool Output:\n {one['output']}",
+        #             "type": "tool"
+        #         })
         ret.extend([{"key": f'{self.id}.{k}', "value": v, "type": "variable"} for k, v in result.items()])
         return ret
 

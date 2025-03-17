@@ -16,8 +16,7 @@ volumes/
 data/
 
 # VSCode
-.vscode
-.vscode/settings.json
+
 .chroma
 .ruff_cache
 .isort.cfg

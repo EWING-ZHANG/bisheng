@@ -36,7 +36,7 @@ from bisheng.api import settings
 from bisheng.api import util
 import peewee
 from datetime import datetime
-from pydantic import BaseModel as pydanticBaseModel
+from pydantic import BaseModel as PydanticBaseModel
 
 def singleton(cls, *args, **kw):
     instances = {}
@@ -461,6 +461,48 @@ class User(DataBaseModel):
     class Meta:
         db_table = "user"
 
+class ChuankRequestModel(PydanticBaseModel):
+    doc_id: str
+    chunk_id: str
+    content_with_weight: str
+    important_kwd: List[str]
+    question_kwd: List[str]
+    available_int: Optional[int] = None
+class SwitchRequest(PydanticBaseModel):
+    chunk_ids: list
+    available_int: Optional[int] = None
+    doc_id: str
+class CreateChunkModel(PydanticBaseModel):
+    doc_id: str
+    content_with_weight: str
+    important_kwd: Optional[List[str]] = []
+    question_kwd: Optional[List[str]] = []
+    available_int: Optional[int] = None
+
+class RetrievalRequestModel(PydanticBaseModel):
+    kb_id: List[str]
+    question: str
+    page: Optional[int] = 1
+    size: Optional[int] = 30
+    doc_ids: Optional[List[str]] = []
+    similarity_threshold: Optional[float] = 0.0
+    vector_similarity_weight: Optional[float] = 0.3
+    top_k: Optional[int] = 1024
+    rerank_id: Optional[str] = None
+    keyword: Optional[bool] = False
+    highlight: Optional[bool] = False
+class KnowledgeUpdateRequest(PydanticBaseModel):
+    """ 知识库创建/更新请求参数 """
+    kb_id: str
+    name: str
+    avatar: str = ""
+    description: Optional[str] = None
+    language: str = "English"
+    permission: str = "me"
+    embd_id: str = "text-embedding-3-large@Azure-OpenAI"
+    parser_id: str = "naive"
+    pagerank: int = 0
+    parser_config: dict=None
 
 class Tenant(DataBaseModel):
     id = CharField(max_length=32, primary_key=True)
@@ -647,7 +689,8 @@ class Knowledgebase(DataBaseModel):
     language = CharField(
         max_length=32,
         null=True,
-        default="Chinese" if "zh_CN" in os.getenv("LANG", "") else "English",
+        # default="Chinese" if "zh_CN" in os.getenv("LANG", "") else "English",
+        default="Chinese",
         help_text="English|Chinese",
         index=True)
     description = TextField(null=True, help_text="KB description")
@@ -955,21 +998,24 @@ class CanvasTemplate(DataBaseModel):
 
     class Meta:
         db_table = "canvas_template"
-class ChangeParserRequest(pydanticBaseModel):
+class ChangeParserRequest(PydanticBaseModel):
     doc_id: str
     parser_id: str
     parser_config: dict = {}
-class ParseRun(pydanticBaseModel):
+class ParseRun(PydanticBaseModel):
     doc_ids: List[str]      # 文档ID列表
     run: int                # 操作序号
-    delete: bool            # 删除标志
-class ChunkBase(pydanticBaseModel):
+class ChunkBase(PydanticBaseModel):
     doc_id: str
     page: int
     size: int
-    keywards: str
-
-
+    keywords: Optional[str] = None
+    available_int: Optional[int] = None
+class DocStatus(PydanticBaseModel):
+    doc_id: str
+    status: str
+class docRm(PydanticBaseModel):
+    doc_ids: List[str]
 def migrate_db():
     with DB.transaction():
         migrator = DatabaseMigrator[settings.DATABASE_TYPE.upper()].value(DB)

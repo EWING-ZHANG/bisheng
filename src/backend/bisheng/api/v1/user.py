@@ -42,6 +42,9 @@ from bisheng.settings import settings
 from bisheng.utils.constants import CAPTCHA_PREFIX, RSA_KEY, USER_PASSWORD_ERROR, USER_CURRENT_SESSION
 from bisheng.utils.logger import logger
 from captcha.image import ImageCaptcha
+from bisheng.api.services.user_service_rag import TenantService, UserTenantService
+from bisheng.api.util.api_utils import get_data_error_result,get_json_result,server_error_response
+
 
 # build router
 router = APIRouter(prefix='', tags=['User'])
@@ -827,3 +830,12 @@ def md5_hash(string):
     md5 = hashlib.md5()
     md5.update(string.encode('utf-8'))
     return md5.hexdigest()
+@router.get('/user/tenant_info')
+def tenant_info(current_user: UserPayload = Depends(get_admin_user)):
+    try:
+        tenants = TenantService.get_info_by(current_user.user_id)
+        if not tenants:
+            return get_data_error_result(message="Tenant not found!")
+        return get_json_result(data=tenants[0])
+    except Exception as e:
+        return server_error_response(e)

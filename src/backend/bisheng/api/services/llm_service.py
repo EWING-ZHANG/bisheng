@@ -23,6 +23,7 @@ from bisheng.api.db import LLMType
 from bisheng.api.db.db_models import DB
 from bisheng.api.db.db_models import LLMFactories, LLM, TenantLLM
 from bisheng.api.services.common_service import CommonService
+from bisheng.api.services.user_service_rag import TenantService, UserTenantService
 
 
 class LLMFactoriesService(CommonService):
@@ -110,7 +111,8 @@ class TenantLLMService(CommonService):
         if not model_config:
             if llm_type in [LLMType.EMBEDDING, LLMType.RERANK]:
                 llm = LLMService.query(llm_name=mdlnm) if not fid else LLMService.query(llm_name=mdlnm, fid=fid)
-                if llm and llm[0].fid in ["Youdao", "FastEmbed", "BAAI"]:
+                # if llm and llm[0].fid in ["Youdao", "FastEmbed", "BAAI"]:
+                if llm and llm[0].fid in ["Youdao", "BAAI"]:
                     model_config = {"llm_factory": llm[0].fid, "api_key":"", "llm_name": mdlnm, "api_base": ""}
             if not model_config:
                 if mdlnm == "flag-embedding":

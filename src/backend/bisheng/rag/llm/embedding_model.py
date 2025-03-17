@@ -248,38 +248,38 @@ class OllamaEmbed(Base):
         return np.array(res["embedding"]), 128
 
 
-class FastEmbed(Base):
-    _model = None
+# class FastEmbed(Base):
+#     _model = None
 
-    def __init__(
-            self,
-            key: str | None = None,
-            model_name: str = "BAAI/bge-small-en-v1.5",
-            cache_dir: str | None = None,
-            threads: int | None = None,
-            **kwargs,
-    ):
-        if not settings.LIGHTEN and not FastEmbed._model:
-            from fastembed import TextEmbedding
-            self._model = TextEmbedding(model_name, cache_dir, threads, **kwargs)
+#     def __init__(
+#             self,
+#             key: str | None = None,
+#             model_name: str = "BAAI/bge-small-en-v1.5",
+#             cache_dir: str | None = None,
+#             threads: int | None = None,
+#             **kwargs,
+#     ):
+#         if not settings.LIGHTEN and not FastEmbed._model:
+#             from fastembed import TextEmbedding
+#             self._model = TextEmbedding(model_name, cache_dir, threads, **kwargs)
 
-    def encode(self, texts: list):
-        # Using the internal tokenizer to encode the texts and get the total
-        # number of tokens
-        encodings = self._model.model.tokenizer.encode_batch(texts)
-        total_tokens = sum(len(e) for e in encodings)
+#     def encode(self, texts: list):
+#         # Using the internal tokenizer to encode the texts and get the total
+#         # number of tokens
+#         encodings = self._model.model.tokenizer.encode_batch(texts)
+#         total_tokens = sum(len(e) for e in encodings)
 
-        embeddings = [e.tolist() for e in self._model.embed(texts, batch_size=16)]
+#         embeddings = [e.tolist() for e in self._model.embed(texts, batch_size=16)]
 
-        return np.array(embeddings), total_tokens
+#         return np.array(embeddings), total_tokens
 
-    def encode_queries(self, text: str):
-        # Using the internal tokenizer to encode the texts and get the total
-        # number of tokens
-        encoding = self._model.model.tokenizer.encode(text)
-        embedding = next(self._model.query_embed(text)).tolist()
+#     def encode_queries(self, text: str):
+#         # Using the internal tokenizer to encode the texts and get the total
+#         # number of tokens
+#         encoding = self._model.model.tokenizer.encode(text)
+#         embedding = next(self._model.query_embed(text)).tolist()
 
-        return np.array(embedding), len(encoding.ids)
+#         return np.array(embedding), len(encoding.ids)
 
 
 class XinferenceEmbed(Base):

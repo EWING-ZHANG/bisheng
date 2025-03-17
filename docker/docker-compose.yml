@@ -157,6 +157,22 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    # 新增 Pulsar 服务
+  pulsar:
+    image: apache/pulsar:2.11.0
+    container_name: milvus-pulsar
+    command: >
+      /bin/bash -c "
+        bin/pulsar standalone --no-functions-worker -nss
+        -c broker.conf=broker.maxMessageSize=10485760
+      "
+    environment:
+      PULSAR_MEM: "-Xms512m -Xmx512m"
+    ports:
+      - "6650:6650"   # Pulsar 服务端口
+      - "8080:8080"   # Pulsar Web 管理端口
+    volumes:
+      - pulsardata:/pulsar/data
 
   milvus:
     container_name: milvus-standalone
@@ -167,6 +183,9 @@ services:
     environment:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
+      MILVUS_PULSAR_ADDRESS: pulsar  # 使用 Docker 服务名（同一网络内）
+      MILVUS_PULSAR_PORT: 6650
+      MILVUS_PULSAR_MAXMESSAGESIZE: 10485760  # 调大为 10MB
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${DOCKER_VOLUME_DIRECTORY:-.}/data/milvus:/var/lib/milvus
@@ -183,3 +202,7 @@ services:
     depends_on:
       - etcd
       - minio
+      - pulsar  # 添加依赖
+
+volumes:
+  pulsardata:

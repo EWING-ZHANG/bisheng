@@ -544,6 +544,7 @@ class ElasticsearchWithPermissionCheck(VectorStore, ABC):
             match_query['bool'][must_or_should].append({query_strategy: {'text': key}})
 
         ret = []
+        # todo 这个获取文本的问题吧
         for one_index_name in self.index_name:
             response = self.client_search(self.client, one_index_name, match_query, size=k)
             hits = [hit for hit in response['hits']['hits']]

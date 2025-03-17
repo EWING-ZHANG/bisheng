@@ -244,12 +244,12 @@ class ElasticKeywordsSearch(VectorStore, ABC):
             print('jieba search keywords:', keywords)
         match_query = {'bool': {must_or_should: []}}
         for key in keywords:
-            match_query['bool'][must_or_should].append({query_strategy: {'text': key}})
+            match_query['bool'][must_or_should].append({query_strategy: {'content_ltks': key}})
         response = self.client_search(self.client, self.index_name, match_query, size=k)
         hits = [hit for hit in response['hits']['hits']]
         docs_and_scores = [(
             Document(
-                page_content=hit['_source']['text'],
+                page_content=hit['_source']['content_with_weight'],
                 # metadata=hit['_source']['metadata'],
             ),
             hit['_score'],

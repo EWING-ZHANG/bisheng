@@ -35,7 +35,6 @@ import re
 from bisheng.api.db.db_models import DB,ChunkBase,ChuankRequestModel,SwitchRequest,CreateChunkModel,RetrievalRequestModel
 from bisheng.api.services.user_service import UserPayload, get_login_user
 import time
-
 router = APIRouter(prefix='/chunk', tags=['ragchunk_app'])
 
 @router.post('/list', status_code=200)
@@ -49,13 +48,23 @@ def list_chunk(req: ChunkBase=Body(...),
         e, doc = DocumentService.get_by_id(doc_id)
         if not e:
             return get_data_error_result(message="Document not found!")
-        kb_ids = KnowledgebaseService.get_kb_ids(login_user.user_id)
+        # edited 修改为该用户下的所有知识库id
+        from bisheng.api.services.knowledge import KnowledgeService
+        from bisheng.database.models.knowledge import KnowledgeDao
+        from bisheng.database.models.knowledge import KnowledgeTypeEnum
+
+        res, total = KnowledgeService.get_knowledge(req,login_user,KnowledgeTypeEnum.NORMAL,None,1,100)
+        # 获取res中所有的id放入到kb_ids中
+        # todo  这里id也有问题 数据没有包含自己该有的kb_id
+        kb_ids = [item.id for item in res]
+        # kb_ids = KnowledgebaseService.get_kb_ids(login_user.user_id)
         query = {
             "doc_ids": [doc_id], "page": page, "size": size, "question": question, "sort": True
         }
         if req.available_int is not None:
             query["available_int"] = req.available_int
-        sres = settings.retrievaler.search(query, search.index_name(login_user.user_id), kb_ids, highlight=True)
+        # 就是这里调用es的地方出现问题
+        sres = settings.retrievaler.search(query, search.index_name_by_doc(doc_id), kb_ids, highlight=True)
         res = {"total": sres.total, "chunks": [], "doc": doc.to_dict()}
         for id in sres.ids:
             d = {
@@ -82,13 +91,14 @@ def list_chunk(req: ChunkBase=Body(...),
         return server_error_response(e)
 @router.get('/get',status_code=200)
 def get(
+    doc_id:str,
     chunk_id:str,
     login_user: UserPayload = Depends(get_login_user)):
     try:
         tenant_id=login_user.user_id
 
         kb_ids = KnowledgebaseService.get_kb_ids(tenant_id)
-        chunk = settings.docStoreConn.get(chunk_id, search.index_name(tenant_id), kb_ids)
+        chunk = settings.docStoreConn.get(chunk_id, search.index_name_by_doc(doc_id), kb_ids)
         if chunk is None:
             return server_error_response(Exception("Chunk not found"))
         k = []
@@ -158,7 +168,7 @@ def set(req: ChuankRequestModel,
         settings.docStoreConn.update(
             {"id": req.chunk_id},  # 属性访问
             d, 
-            search.index_name(tenant_id), 
+            search.index_name_by_kb(doc.kb_id), 
             doc.kb_id
         )
         return get_json_result(data=True)
@@ -175,7 +185,7 @@ def switch(req: SwitchRequest,
         for cid in req.chunk_ids:
             if not settings.docStoreConn.update({"id": cid},
                                                 {"available_int": int(req.available_int)},
-                                                search.index_name(DocumentService.get_tenant_id(req.doc_id)),
+                                                search.index_name_by_doc(req.doc_id),
                                                 doc.kb_id):
                 return get_data_error_result(message="Index updating failure")
 
@@ -191,7 +201,7 @@ def rm(req: SwitchRequest,
             e, doc = DocumentService.get_by_id(req.doc_id)
             if not e:
                 return get_data_error_result(message="Document not found!")
-            if not settings.docStoreConn.delete({"id": req.chunk_ids}, search.index_name(login_user.user_id), doc.kb_id):
+            if not settings.docStoreConn.delete({"id": req.chunk_ids}, search.index_name_by_kb(doc.kb_id), doc.kb_id):
                 return get_data_error_result(message="Index updating failure")
             deleted_chunk_ids = req.chunk_ids
             chunk_number = len(deleted_chunk_ids)
@@ -242,7 +252,7 @@ def create(req: CreateChunkModel):
         v, c = embd_mdl.encode([doc.name, req.content_with_weight if not d["question_kwd"] else "\n".join(d["question_kwd"])])
         v = 0.1 * v[0] + 0.9 * v[1]
         d["q_%d_vec" % len(v)] = v.tolist()
-        settings.docStoreConn.insert([d], search.index_name(tenant_id), doc.kb_id)
+        settings.docStoreConn.insert([d], search.index_name_by_kb(doc.kb_id), doc.kb_id)
 
         DocumentService.increment_chunk_num(doc.id, doc.kb_id, c, 1, 0)
         return get_json_result(data={"chunk_id": chunck_id})

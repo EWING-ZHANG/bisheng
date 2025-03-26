@@ -284,3 +284,9 @@ class KnowledgeDao(KnowledgeBase):
             if not only_clear:
                 session.exec(delete(Knowledge).where(Knowledge.id == knowledge_id))
             session.commit()
+    @classmethod
+    def delete_kb_mysql(cls, knowledge_id: int):
+        with session_getter() as session:
+            session.exec(delete(Knowledge).where(Knowledge.id == knowledge_id))
+            session.commit()
+

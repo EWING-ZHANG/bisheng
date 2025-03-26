@@ -19,7 +19,6 @@ from bisheng.api.db import FileSource
 from bisheng.api.db.db_models import DB
 from bisheng.api.db.db_models import File, File2Document
 from bisheng.api.services.common_service import CommonService
-from bisheng.api.services.document_service import DocumentService
 from bisheng.api.util import current_timestamp, datetime_format, get_uuid
 
 
@@ -70,6 +69,7 @@ class File2DocumentService(CommonService):
     @classmethod
     @DB.connection_context()
     def get_storage_address(cls, doc_id=None, file_id=None):
+        
         if doc_id:
             f2d = cls.get_by_document_id(doc_id)
         else:
@@ -81,5 +81,6 @@ class File2DocumentService(CommonService):
             doc_id = f2d[0].document_id
 
         assert doc_id, "please specify doc_id"
+        from bisheng.api.services.document_service import DocumentService
         e, doc = DocumentService.get_by_id(doc_id)
         return doc.kb_id, doc.location

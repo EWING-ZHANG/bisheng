@@ -40,7 +40,6 @@ import tracemalloc
 import numpy as np
 from bisheng.api.db import LLMType, ParserType
 from bisheng.services.dialog_service import keyword_extraction, question_proposal
-from bisheng.api.services.document_service import DocumentService
 from bisheng.api.services.llm_service import LLMBundle
 from bisheng.api.services.task_service import TaskService
 from bisheng.api.services.file2document_service import File2DocumentService
@@ -263,7 +262,9 @@ def build_chunks(task, progress_callback):
 
 
 def init_kb(row, vector_size: int):
-    idxnm = search.index_name(row["tenant_id"])
+    # todo_index遍历所有的索引，如果没有就创建
+    idxnm = search.index_name_by_kb(row["kb_id"])
+    # idxnm = search.index_name(row["tenant_id"])
     return settings.docStoreConn.createIdx(idxnm, row["kb_id"], vector_size)
 
 
@@ -362,6 +363,7 @@ def run_raptor(row, chat_mdl, embd_mdl, callback=None):
 
 
 def do_handle_task(task):
+    from bisheng.api.services.document_service import DocumentService
     task_id = task["id"]
     task_from_page = task["from_page"]
     task_to_page = task["to_page"]
@@ -373,6 +375,8 @@ def do_handle_task(task):
     task_doc_id = task["doc_id"]
     task_document_name = task["name"]
     task_parser_config = task["parser_config"]
+    # edited_index_name
+    index_name = search.index_name_by_kb(task_dataset_id)
 
     # prepare the progress callback function
     progress_callback = partial(set_progress, task_id, task_from_page, task_to_page)
@@ -423,26 +427,26 @@ def do_handle_task(task):
         progress_message = "Embedding chunks ({:.2f}s)".format(timer() - start_ts)
         logging.info(progress_message)
         progress_callback(msg=progress_message)
-    # logging.info(f"task_executor init_kb index {search.index_name(task_tenant_id)} embedding_model {embedding_model.llm_name} vector length {vector_size}")
+    # logging.info(f"task_executor init_kb index {index_name} embedding_model {embedding_model.llm_name} vector length {vector_size}")
     init_kb(task, vector_size)
     chunk_count = len(set([chunk["id"] for chunk in chunks]))
     start_ts = timer()
     doc_store_result = ""
     es_bulk_size = 4
     for b in range(0, len(chunks), es_bulk_size):
-        doc_store_result = settings.docStoreConn.insert(chunks[b:b + es_bulk_size], search.index_name(task_tenant_id), task_dataset_id)
+        doc_store_result = settings.docStoreConn.insert(chunks[b:b + es_bulk_size], index_name, task_dataset_id)
         if b % 128 == 0:
             progress_callback(prog=0.8 + 0.1 * (b + 1) / len(chunks), msg="")
     logging.info("Indexing {} elapsed: {:.2f}".format(task_document_name, timer() - start_ts))
     if doc_store_result:
         error_message = f"Insert chunk error: {doc_store_result}, please check log file and Elasticsearch/Infinity status!"
         progress_callback(-1, msg=error_message)
-        settings.docStoreConn.delete({"doc_id": task_doc_id}, search.index_name(task_tenant_id), task_dataset_id)
+        settings.docStoreConn.delete({"doc_id": task_doc_id}, index_name, task_dataset_id)
         logging.error(error_message)
         raise Exception(error_message)
 
     if TaskService.do_cancel(task_id):
-        settings.docStoreConn.delete({"doc_id": task_doc_id}, search.index_name(task_tenant_id), task_dataset_id)
+        settings.docStoreConn.delete({"doc_id": task_doc_id}, index_name, task_dataset_id)
         return
 
     DocumentService.increment_chunk_num(task_doc_id, task_dataset_id, token_count, chunk_count, 0)

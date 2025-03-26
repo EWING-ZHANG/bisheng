@@ -50,42 +50,45 @@ class KnowledgebaseService(CommonService):
             cls.model.parser_id,
             cls.model.embd_id,
             cls.model.tenant_id,
-            User.user_name,
+            User.user_name.alias('nickname'),
             User.user_id,
+            cls.model.created_by,
             #   User.avatar.alias('tenant_avatar'),
              cls.model.update_time
         ]
 
         # Todo permission 
-        if keywords:
-            kbs = (cls.model.select(*fields)
-           .join(User, JOIN.LEFT_OUTER, on=(cls.model.tenant_id == User.user_id))  # 明确指定JOIN类型
-           .where(
-                ((cls.model.tenant_id.in_(joined_tenant_ids) & 
-                  (cls.model.permission == TenantPermission.TEAM.value)) | 
-                 (cls.model.tenant_id == user_id)) & 
-                (cls.model.status == StatusEnum.VALID.value),
-                (fn.LOWER(cls.model.name).contains(keywords.lower()))
-           ))
-        else:
-            kbs = (
-                    cls.model.select(*fields)
-                    .join(
-                        User,
-                        JOIN.LEFT_OUTER,
-                        on=(cls.model.tenant_id == User.user_id)  # CAST语法
-                    )
-                    .where(
-                        (
-                            (cls.model.tenant_id.in_(joined_tenant_ids)) &
-                            (cls.model.permission == TenantPermission.TEAM.value)
-                        ) |
-                        (
-                            (cls.model.tenant_id == str(user_id)) &
-                            (cls.model.status == StatusEnum.VALID.value)
-                        )
-                    )
-                )
+        # if keywords:
+        from peewee import SQL
+
+        kbs = (cls.model.select(*fields)
+        .join(User, JOIN.LEFT_OUTER, 
+        on=(cls.model.created_by == fn.CONVERT(User.user_id, SQL("CHAR")))))
+        # .where(
+        #     ((cls.model.permission == TenantPermission.TEAM.value)) | 
+        #         (cls.model.tenant_id == user_id)) & 
+        #         (cls.model.status == StatusEnum.VALID.value)
+        #         # (fn.LOWER(cls.model.name).contains(keywords.lower()))
+        #    )
+        # else:
+        #     kbs = (
+        #             cls.model.select(*fields)
+        #             .join(
+        #                 User,
+        #                 JOIN.LEFT_OUTER,
+        #                 on=(cls.model.tenant_id == User.user_id)  # CAST语法
+        #             )
+        #             .where(
+        #                 (
+        #                     (cls.model.tenant_id.in_(joined_tenant_ids)) &
+        #                     (cls.model.permission == TenantPermission.TEAM.value)
+        #                 ) |
+        #                 (
+        #                     (cls.model.tenant_id == str(user_id)) &
+        #                     (cls.model.status == StatusEnum.VALID.value)
+        #                 )
+        #             )
+        #         )
         if desc:
             kbs = kbs.order_by(cls.model.getter_by(orderby).desc())
         else:

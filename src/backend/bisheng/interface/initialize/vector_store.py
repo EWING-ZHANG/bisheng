@@ -253,9 +253,12 @@ def initial_elastic(class_object: Type[ElasticKeywordsSearch], params: dict, sea
 
     collection_id = params.pop('collection_id', '')
     if collection_id:
-        with session_getter() as session:
-            knowledge = session.get(Knowledge, collection_id)
-        index_name = knowledge.index_name or knowledge.collection_name
+        # with session_getter() as session:
+        #     knowledge = session.get(Knowledge, collection_id)
+        # index_name = knowledge.index_name or knowledge.collection_name
+        # edited
+        from bisheng.rag.nlp import search as nlp_search
+        index_name = nlp_search.index_name_by_kb(collection_id)
         params['index_name'] = index_name
     params['embedding'] = ''
     return class_object.from_documents(**params)

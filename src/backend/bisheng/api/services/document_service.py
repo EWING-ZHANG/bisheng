@@ -31,7 +31,6 @@ from bisheng.api.util import current_timestamp, get_format_time, get_uuid
 # from bisheng.graphrag.mind_map_extractor import MindMapExtractor
 from bisheng.rag.settings import SVR_QUEUE_NAME
 from bisheng.rag.utils.storage_factory import STORAGE_IMPL
-from bisheng.rag.nlp import search, rag_tokenizer
 
 from bisheng.api.db import FileType, TaskStatus, ParserType, LLMType
 from bisheng.api.db.db_models import DB, Knowledgebase, Tenant, Task, UserTenant
@@ -108,8 +107,10 @@ class DocumentService(CommonService):
 
     @classmethod
     @DB.connection_context()
-    def remove_document(cls, doc, tenant_id):
-        settings.docStoreConn.delete({"doc_id": doc.id}, search.index_name(tenant_id), doc.kb_id)
+    def remove_document(cls, doc):
+        from bisheng.rag.nlp import search
+        # 根据
+        settings.docStoreConn.delete({"doc_id": doc.id}, search.index_name_by_kb(doc.kb_id), doc.kb_id)
         cls.clear_chunk_num(doc.id)
         return cls.delete_by_id(doc.id)
 
@@ -517,8 +518,8 @@ def doc_upload_and_parse(conversation_id, file_objs, user_id):
             chunk_counts[doc_id] += len(cnts[i:i + batch_size])
             token_counts[doc_id] += c
         return vects
-
-    idxnm = search.index_name(kb.tenant_id)
+    from bisheng.rag.nlp import search, rag_tokenizer
+    idxnm = search.index_name_by_kb(kb.id)
     try_create_idx = True
 
     _, tenant = TenantService.get_by_id(kb.tenant_id)

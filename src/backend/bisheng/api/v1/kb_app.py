@@ -19,8 +19,17 @@ from bisheng.api.services.file_service import FileService
 from bisheng.rag.nlp import search
 from bisheng.api.db.db_models import File,KnowledgeUpdateRequest
 from bisheng.api.services.user_service_rag import TenantService, UserTenantService
+
+
+#bisheng的依赖
+from bisheng.database.models.knowledge import (KnowledgeCreate, 
+                                                KnowledgeTypeEnum)
+from bisheng.database.models.user import UserDao
+
+from bisheng.api.services.knowledge import KnowledgeService
+
 router = APIRouter(prefix='/kb', tags=['kb_app'])
-@router.post('/create', status_code=201)
+@router.post('/create', status_code=200)
 async def create_knowledge(*,
                      request: Request,
                      login_user: UserPayload = Depends(get_login_user),
@@ -37,17 +46,22 @@ async def create_knowledge(*,
             message=f"Dataset name length is {len(dataset_name)} which is large than {DATASET_NAME_LIMIT}")
 
     dataset_name = dataset_name.strip()
-    dataset_name = duplicate_name(
-        KnowledgebaseService.query,
-        name=dataset_name,
-        tenant_id=login_user.user_id,
-        status=StatusEnum.VALID.value)
+    # dataset_name = duplicate_name(
+    #     KnowledgebaseService.query,
+    #     name=dataset_name,
+    #     tenant_id=login_user.user_id,
+    #     status=StatusEnum.VALID.value)
+        
+    knowledge = KnowledgeCreate(model=4,name=name,description=req.get("description", ""),type=KnowledgeTypeEnum.NORMAL.value)
+    db_knowledge = KnowledgeService.create_knowledge(request, login_user, knowledge)
     try:
-        req["id"] = get_uuid()
-        req["tenant_id"] = login_user.user_id
+        # tenants = UserTenantService.query(user_id=login_user.user_id)
+        req["id"] = db_knowledge.id
+        req["tenant_id"] = "1"
         req["created_by"] = login_user.user_id
-        req["name"] = dataset_name
-        e, t = TenantService.get_by_id(login_user.user_id)
+        req["name"] = db_knowledge.name
+        # 得到固定的tenant相关的东西
+        e, t = TenantService.get_by_id("1")
         if not e:
             return get_data_error_result(message="Tenant not found.")
         req["embd_id"] = t.embd_id
@@ -79,7 +93,7 @@ async def detail(kb_id: str,login_user: UserPayload = Depends(get_login_user)):
     except Exception as e:
         return server_error_response(e)
 @router.get('/list', status_code=200)
-async def list_kbs(
+async def list_kbs(request: Request,
     keywords: Optional[str] = Query(default=""),
     page_number: int = Query(default=1, alias="page"),
     items_per_page: int = Query(default=150, alias="page_size"),
@@ -87,22 +101,49 @@ async def list_kbs(
     desc: bool = Query(default=True),
     login_user: UserPayload = Depends(get_login_user)  # 认证依赖注入[1][4]
 ):
+        # usertenant表中获取信息
         tenants =[{"tenant_id":login_user.user_id}] # 类似java中的list列表 然后每个对象就是里面的字典
         try:
+            # # 获取ragflow的所有知识库
+            # kbs, total = KnowledgebaseService.get_by_tenant_ids(
+            #     [m["tenant_id"] for m in tenants], login_user.user_id, 1, 100, orderby, desc, keywords)
+            
+            # # bisheng里面去查询用户的数据 然后对ragflow的进行过滤
+            # res, total = KnowledgeService.get_knowledge(request,login_user, KnowledgeTypeEnum.NORMAL, keywords,
+            #                                 page_number, items_per_page)
+            # # 根据res里面的每个对象的id字段过滤调kbs里面的list对象,留下来的kbs里面的list的对象添加一个type字段为res里面对应id的type
+
+            # return get_json_result(data={"kbs": kbs, "total": total})
+
+            # 获取ragflow的所有知识库 
             kbs, total = KnowledgebaseService.get_by_tenant_ids(
-                [m["tenant_id"] for m in tenants], login_user.user_id, page_number, items_per_page, orderby, desc, keywords)
-            return get_json_result(data={"kbs": kbs, "total": total})
+                ["1"], 1, 1, 200, orderby, desc, '')
+
+            # 查询Bisheng
+            res, res_total = KnowledgeService.get_knowledge(request, login_user, KnowledgeTypeEnum.NORMAL, keywords,
+                                                    page_number, items_per_page)
+            temp = []
+            result = {item["id"]: item for item in kbs}
+            for item in res:
+                id= str(item.id)
+                if result.get(id):
+                    temp.append(result.get(id))
+            
+
+            return get_json_result(data={"kbs": temp, "total": res_total})
+
         except Exception as e:
             return server_error_response(e)
 @router.get('/rm', status_code=200)
-def rm(kb_id:str,
+def rm(request: Request,
+        kb_id:str,
         login_user: UserPayload = Depends(get_login_user)):
-    if not KnowledgebaseService.accessible4deletion(kb_id, login_user.user_id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=settings.RetCode.AUTHENTICATION_ERROR
-        )
+    # if not KnowledgebaseService.accessible4deletion(kb_id, login_user.user_id):
+    #     return get_json_result(
+    #         data=False,
+    #         message='No authorization.',
+    #         code=settings.RetCode.AUTHENTICATION_ERROR
+    #     )
     try:
         kbs = KnowledgebaseService.query(
         created_by=login_user.user_id, id=kb_id)
@@ -112,7 +153,8 @@ def rm(kb_id:str,
                 code=settings.RetCode.OPERATING_ERROR)
 
         for doc in DocumentService.query(kb_id):
-            if not DocumentService.remove_document(doc, kbs[0].tenant_id):
+            #  if not DocumentService.remove_document(doc, kbs[0].tenant_id):
+            if not DocumentService.remove_document(doc):
                 return get_data_error_result(
                     message="Database error (Document removal)!")
             f2d = File2DocumentService.get_by_document_id(doc.id)
@@ -124,8 +166,11 @@ def rm(kb_id:str,
             return get_data_error_result(
                 message="Database error (Knowledgebase removal)!")
         for kb in kbs:
-            settings.docStoreConn.delete({"kb_id": kb.id}, search.index_name(kb.tenant_id), kb.id)
-            settings.docStoreConn.deleteIdx(search.index_name(kb.tenant_id), kb.id)
+            settings.docStoreConn.delete({"kb_id": kb.id}, search.index_name_by_kb(kb.id), kb.id)
+            settings.docStoreConn.deleteIdx(search.index_name_by_kb(kb.id), kb.id)
+        # 删除 bisheng里面的知识库
+        from bisheng.database.models.knowledge import KnowledgeDao
+        KnowledgeDao.delete_kb_mysql(kb_id)
         return get_json_result(data=True)
     except Exception as e:
         return server_error_response(e)
@@ -134,12 +179,12 @@ def update(req: KnowledgeUpdateRequest,
            login_user: UserPayload = Depends(get_login_user)):
     req = req.dict()
     req["name"] = req["name"].strip()
-    if not KnowledgebaseService.accessible4deletion(req["kb_id"], login_user.user_id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=settings.RetCode.AUTHENTICATION_ERROR
-        )
+    # if not KnowledgebaseService.accessible4deletion(req["kb_id"], login_user.user_id):
+    #     return get_json_result(
+    #         data=False,
+    #         message='No authorization.',
+    #         code=settings.RetCode.AUTHENTICATION_ERROR
+    #     )
     try:
         if not KnowledgebaseService.query(
                 created_by=login_user.user_id, id=req["kb_id"]):

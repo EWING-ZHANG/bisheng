@@ -46,6 +46,9 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         logger.debug(f'on_llm_new_token token={token} kwargs={kwargs}')
         # azure偶尔会返回一个None
+        # if token 有``` 直接return
+        # if(token=='```' or token =='json' or token=='action' or token=='Final'): return
+
         if token is None:
             return
         resp = ChatResponse(message=token,
@@ -56,6 +59,15 @@ class AsyncStreamingLLMCallbackHandler(AsyncCallbackHandler):
         await self.websocket.send_json(resp.dict())
         if self.stream_queue:
             self.stream_queue.put(token)
+    # async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+    #     logger.debug(f'on_llm_new_token token={token} kwargs={kwargs}')
+    #     if token is None:
+    #         return
+    # # 直接发送纯文本 Token 到前端
+    #     await self.websocket.send_text(token)
+    # # 将 Token 存入队列供后续处理
+    #     if self.stream_queue:
+    #         self.stream_queue.put(token)
 
     async def on_llm_start(self, serialized: Dict[str, Any], prompts: List[str],
                            **kwargs: Any) -> Any:
@@ -499,14 +511,14 @@ class AsyncGptsDebugCallbackHandler(AsyncGptsLLMCallbackHandler):
         output_info = {'tool_key': tool_name, 'output': output}
         resp = ChatResponse(type='end',
                             category=tool_category,
-                            intermediate_steps=intermediate_steps,
+                            # intermediate_steps=intermediate_steps,
                             message=json.dumps(output_info, ensure_ascii=False),
                             flow_id=self.flow_id,
                             chat_id=self.chat_id,
                             extra=json.dumps({'run_id': kwargs.get('run_id').hex}))
 
         await self.websocket.send_json(resp.dict())
-        # 从tool cache中获取input信息
+         # 从tool cache中获取input信息
         input_info = self.tool_cache.get(kwargs.get('run_id').hex)
         if input_info:
             if not self.chat_id:

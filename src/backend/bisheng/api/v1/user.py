@@ -78,6 +78,16 @@ async def regist(*, user: UserCreate):
             db_user = UserDao.add_user_and_admin_role(db_user)
         # 将用户写入到默认用户组下
         UserGroupDao.add_default_user_group(db_user.user_id)
+        from bisheng.api.util import get_uuid
+        from bisheng.api.db import UserTenantRole, StatusEnum
+
+        UserTenantService.save(
+            id=get_uuid(),
+            user_id=db_user.user_id,
+            tenant_id=1,
+            invited_by=db_user.user_id,
+            role=UserTenantRole.OWNER,
+            status=StatusEnum.VALID.value)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'数据库写入错误， {str(e)}') from e
     return resp_200(db_user)

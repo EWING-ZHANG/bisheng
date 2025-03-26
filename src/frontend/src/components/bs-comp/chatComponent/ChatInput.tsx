@@ -135,6 +135,7 @@ export default function ChatInput({ clear, form, questions, inputForm, wsUrl, on
             try {
                 let startTime = Date.now();
                 const ws = new WebSocket(`${webSocketProtocol}://${wsUrl}&chat_id=${chatId}`)
+                console.log("WebSocket connecting...",ws);
                 wsRef.current = ws
                 // websocket linsen
                 ws.onopen = () => {

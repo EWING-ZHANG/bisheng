@@ -97,11 +97,12 @@ class TenantService(CommonService):
             cls.model.asr_id,
             cls.model.img2txt_id,
             cls.model.tts_id,
-            cls.model.parser_ids,
-            UserTenant.role]
-        return list(cls.model.select(*fields)
-                    .join(UserTenant, on=((cls.model.id == UserTenant.tenant_id) & (UserTenant.user_id == user_id) & (UserTenant.status == StatusEnum.VALID.value) & (UserTenant.role == UserTenantRole.OWNER)))
-                    .where(cls.model.status == StatusEnum.VALID.value).dicts())
+            cls.model.parser_ids
+            # UserTenant.role]
+        ]
+        return list(cls.model.select(*fields).dicts())
+                    # .join(UserTenant, on=((cls.model.id == "1") & (UserTenant.user_id == user_id) & (UserTenant.status == StatusEnum.VALID.value) & (UserTenant.role == UserTenantRole.OWNER)))
+                    # .where(cls.model.status == StatusEnum.VALID.value).dicts())
 
     @classmethod
     @DB.connection_context()

@@ -78,7 +78,8 @@ class StructuredChatOutputParserWithRetries(AgentOutputParser):
         base_parser: Optional[StructuredChatOutputParser] = None,
     ) -> StructuredChatOutputParserWithRetries:
         if llm is not None:
-            base_parser = base_parser or StructuredChatOutputParser()
+            # base_parser = base_parser or StructuredChatOutputParser()
+            
             output_fixing_parser = OutputFixingParser.from_llm(
                 llm=llm, parser=base_parser
             )

@@ -38,7 +38,6 @@ from fastapi import BackgroundTasks, Request
 from loguru import logger
 from pymilvus import Collection
 
-
 class KnowledgeService(KnowledgeUtils):
 
     @classmethod
@@ -100,7 +99,7 @@ class KnowledgeService(KnowledgeUtils):
         if embed_info.model_type != LLMModelType.EMBEDDING.value:
             raise KnowledgeNoEmbeddingError.http_exception()
 
-        # 自动生成 es和milvus的 collection_name
+        # 自动生成 es和milvus的 collection_name ToDo 去除调
         if not db_knowledge.collection_name:
             if knowledge.is_partition:
                 embedding = knowledge.model
@@ -114,6 +113,12 @@ class KnowledgeService(KnowledgeUtils):
 
         # 插入到数据库
         db_knowledge.user_id = login_user.user_id
+        from bisheng.api.util import get_uuid
+        # db_knowledge.id=get_uuid()
+        import secrets
+        # 生成一个 64 位的无符号随机整数
+        random_bigint = secrets.randbits(32)
+        db_knowledge.id = random_bigint
         db_knowledge = KnowledgeDao.insert_one(db_knowledge)
 
         # 处理创建知识库的后续操作

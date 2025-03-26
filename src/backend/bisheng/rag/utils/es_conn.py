@@ -56,7 +56,7 @@ class ESConnection(DocStoreConnection):
             logger.error(msg)
             raise Exception(msg)
         self.mapping = json.load(open(fp_mapping, "r"))
-        logger.info(f"Elasticsearch {settings.ES['hosts']} is healthy.")
+        logger.error(f"Elasticsearch {settings.ES['hosts']} is healthy.")
 
     """
     Database operations

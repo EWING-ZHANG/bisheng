@@ -25,7 +25,6 @@ from bisheng.api.db import LLMType, UserTenantRole
 from bisheng.api.db.db_models import init_database_tables as init_web_db, LLMFactories, LLM, TenantLLM
 from bisheng.api.services import UserService
 from bisheng.api.services.canvas_service import CanvasTemplateService
-from bisheng.api.services.document_service import DocumentService
 from bisheng.api.services.knowledgebase_service import KnowledgebaseService
 from bisheng.api.services.llm_service import LLMFactoriesService, LLMService, TenantLLMService, LLMBundle
 from bisheng.api.services.user_service import TenantService, UserTenantService
@@ -96,6 +95,7 @@ def init_superuser():
 
 
 def init_llm_factory():
+    from bisheng.api.services.document_service import DocumentService
     try:
         LLMService.filter_delete([(LLM.fid == "MiniMax" or LLM.fid == "Minimax")])
         LLMService.filter_delete([(LLM.fid == "cohere")])

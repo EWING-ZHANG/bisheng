@@ -38,15 +38,15 @@ def list_docs(kb_id: str,
     if not kb_id:
         return get_json_result(
             data=False, message='Lack of "KB ID"', code=settings.RetCode.ARGUMENT_ERROR)
-    if not KnowledgebaseService.query(
-            tenant_id=login_user.user_id, id=kb_id):
-        return get_json_result(
-            data=False, message='Only owner of knowledgebase authorized for this operation.',
-            code=settings.RetCode.OPERATING_ERROR)
+    # if not KnowledgebaseService.query(
+    #         tenant_id=login_user.user_id, id=kb_id):
+    #     return get_json_result(
+    #         data=False, message='Only owner of knowledgebase authorized for this operation.',
+    #         code=settings.RetCode.OPERATING_ERROR)
     try:
         docs, tol = DocumentService.get_by_kb_id(
             kb_id, page_number, items_per_page, orderby, desc, keywords)
-
+        # todo 
         for doc_item in docs:
             if doc_item['thumbnail'] and not doc_item['thumbnail'].startswith(IMG_BASE64_PREFIX):
                 doc_item['thumbnail'] = f"/v1/document/image/{kb_id}-{doc_item['thumbnail']}"
@@ -132,13 +132,13 @@ def create(kb_id:str,
 def docinfos(doc_ids: List[str] =Body(...,alias="doc_ids"),
              login_user: UserPayload = Depends(get_login_user)  # 认证依赖注入[1][4]
              ):
-    for doc_id in doc_ids:
-        if not DocumentService.accessible(doc_id, login_user.user_id):
-            return get_json_result(
-                data=False,
-                message='No authorization.',
-                code=settings.RetCode.AUTHENTICATION_ERROR
-            )
+    # for doc_id in doc_ids:
+    #     if not DocumentService.accessible(doc_id, login_user.user_id):
+    #         return get_json_result(
+    #             data=False,
+    #             message='No authorization.',
+    #             code=settings.RetCode.AUTHENTICATION_ERROR
+    #         )
     docs = DocumentService.get_by_ids(doc_ids)
     return get_json_result(data=list(docs.dicts()))
 
@@ -173,11 +173,11 @@ def change_status(req: DocStatus,
             message='"Status" must be either 0 or 1!',
             code=settings.RetCode.ARGUMENT_ERROR)
 
-    if not DocumentService.accessible(doc_id, login_user.user_id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=settings.RetCode.AUTHENTICATION_ERROR)
+    # if not DocumentService.accessible(doc_id, login_user.user_id):
+    #     return get_json_result(
+    #         data=False,
+    #         message='No authorization.',
+    #         code=settings.RetCode.AUTHENTICATION_ERROR)
 
     try:
         e, doc = DocumentService.get_by_id(doc_id)
@@ -192,10 +192,11 @@ def change_status(req: DocStatus,
                 doc_id, {"status": str(status)}):
             return get_data_error_result(
                 message="Database error (Document update)!")
-
+        #edtied_index_name
+        search.index_name_by_kb(kb.get("id"))
         status = int(status)
         settings.docStoreConn.update({"doc_id": doc_id}, {"available_int": status},
-                                     search.index_name(kb.tenant_id), doc.kb_id)
+                                     search.index_name_by_kb(doc.kb_id), doc.kb_id)
         return get_json_result(data=True)
     except Exception as e:
         return server_error_response(e)   
@@ -204,13 +205,13 @@ def rm(doc_ids:docRm,
         login_user: UserPayload = Depends(get_login_user)):
     # if isinstance(doc_id, str): doc_ids = [doc_id]
     doc_ids = doc_ids.doc_ids
-    for doc_id in doc_ids:
-        if not DocumentService.accessible4deletion(doc_id, login_user.user_id):
-            return get_json_result(
-                data=False,
-                message='No authorization.',
-                code=settings.RetCode.AUTHENTICATION_ERROR
-            )
+    # for doc_id in doc_ids:
+    #     if not DocumentService.accessible4deletion(doc_id, login_user.user_id):
+    #         return get_json_result(
+    #             data=False,
+    #             message='No authorization.',
+    #             code=settings.RetCode.AUTHENTICATION_ERROR
+    #         )
 
     root_folder = FileService.get_root_folder(login_user.user_id)
     pf_id = root_folder["id"]
@@ -227,7 +228,7 @@ def rm(doc_ids:docRm,
 
             b, n = File2DocumentService.get_storage_address(doc_id=doc_id)
 
-            if not DocumentService.remove_document(doc, tenant_id):
+            if not DocumentService.remove_document(doc):
                 return get_data_error_result(
                     message="Database error (Document removal)!")
 
@@ -247,12 +248,12 @@ def rm(doc_ids:docRm,
 def rename(doc_id:str,
            name: str,
            login_user: UserPayload = Depends(get_login_user)):
-    if not DocumentService.accessible(doc_id, login_user.user_id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=settings.RetCode.AUTHENTICATION_ERROR
-        )
+    # if not DocumentService.accessible(doc_id, login_user.user_id):
+    #     return get_json_result(
+    #         data=False,
+    #         message='No authorization.',
+    #         code=settings.RetCode.AUTHENTICATION_ERROR
+    #     )
     try:
         e, doc = DocumentService.get_by_id(doc_id)
         if not e:
@@ -363,12 +364,12 @@ def get_image(image_id: str):
 def change_parser(req: ChangeParserRequest = Body(...),
                   login_user: UserPayload = Depends(get_login_user)):
 
-    if not DocumentService.accessible(req.doc_id, login_user.user_id):
-        return get_json_result(
-            data=False,
-            message='No authorization.',
-            code=settings.RetCode.AUTHENTICATION_ERROR
-        )
+    # if not DocumentService.accessible(req.doc_id, login_user.user_id):
+    #     return get_json_result(
+    #         data=False,
+    #         message='No authorization.',
+    #         code=settings.RetCode.AUTHENTICATION_ERROR
+    #     )
     try:
         e, doc = DocumentService.get_by_id(req.doc_id)
         if not e:
@@ -400,8 +401,8 @@ def change_parser(req: ChangeParserRequest = Body(...),
             tenant_id = DocumentService.get_tenant_id(req.doc_id)
             if not tenant_id:
                 return get_data_error_result(message="Tenant not found!")
-            if settings.docStoreConn.indexExist(search.index_name(tenant_id), doc.kb_id):
-                settings.docStoreConn.delete({"doc_id": doc.id}, search.index_name(tenant_id), doc.kb_id)
+            if settings.docStoreConn.indexExist(search.index_name_by_kb(doc.kb_id), doc.kb_id):
+                settings.docStoreConn.delete({"doc_id": doc.id}, search.index_name_by_kb(doc.kb_id), doc.kb_id)
 
         return get_json_result(data=True)
     except Exception as e:
@@ -409,13 +410,13 @@ def change_parser(req: ChangeParserRequest = Body(...),
 @router.post('/run',status_code=200)
 def run(req: ParseRun=Body(...),
         login_user: UserPayload = Depends(get_login_user)):
-    for doc_id in req.doc_ids:
-        if not DocumentService.accessible(doc_id, login_user.user_id):
-            return get_json_result(
-                data=False,
-                message='No authorization.',
-                code=settings.RetCode.AUTHENTICATION_ERROR
-            )
+    # for doc_id in req.doc_ids:
+    #     if not DocumentService.accessible(doc_id, login_user.user_id):
+    #         return get_json_result(
+    #             data=False,
+    #             message='No authorization.',
+    #             code=settings.RetCode.AUTHENTICATION_ERROR
+    #         )
     try:
         for id in req.doc_ids:
             info = {"run": str(req.run), "progress": 0}
@@ -431,8 +432,8 @@ def run(req: ParseRun=Body(...),
             e, doc = DocumentService.get_by_id(id)
             if not e:
                 return get_data_error_result(message="Document not found!")
-            if settings.docStoreConn.indexExist(search.index_name(tenant_id), doc.kb_id):
-                settings.docStoreConn.delete({"doc_id": id}, search.index_name(tenant_id), doc.kb_id)
+            if settings.docStoreConn.indexExist(search.index_name(doc.kb_id), doc.kb_id):
+                settings.docStoreConn.delete({"doc_id": id}, search.index_name_by_kb(doc.kb_id), doc.kb_id)
 
             if str(req.run) == TaskStatus.RUNNING.value:
                 TaskService.filter_delete([Task.doc_id == id])

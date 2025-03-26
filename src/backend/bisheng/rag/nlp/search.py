@@ -23,9 +23,28 @@ from bisheng.rag.utils import rmSpace
 from bisheng.rag.nlp import rag_tokenizer, query
 import numpy as np
 from bisheng.rag.utils.doc_store_conn import DocStoreConnection, MatchDenseExpr, FusionExpr, OrderByExpr
-
-
+# bisheng的依赖
+from bisheng.database.models.knowledge import KnowledgeDao
+# edited
 def index_name(uid): return f"ragflow_{uid}"
+def index_name_by_tenant(tenant_id): 
+
+
+    return f"ragflow_{tenant_id}"
+
+
+def index_name_by_kb(kb_id): 
+    # edited查询该用户下面的所有索引 这种是在session里面查找的
+    knowledge = KnowledgeDao.query_by_id(kb_id)
+    return knowledge.index_name
+def index_name_by_doc(doc_id):
+    from bisheng.api.services.document_service import DocumentService
+    kb_id =  DocumentService.get_knowledgebase_id(doc_id)
+    knowledge = KnowledgeDao.query_by_id(kb_id)
+    return knowledge.index_name
+
+
+
 
 
 class Dealer:

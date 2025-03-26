@@ -469,7 +469,7 @@ class AssistantAgent(AssistantUtils):
 
         # trim message
         inputs = await self.trim_messages(inputs)
-
+        # edited 黑框
         if self.current_agent_executor == 'ReAct':
             result = await self.react_run(inputs, callback)
         else:
@@ -495,4 +495,4 @@ class AssistantAgent(AssistantUtils):
         for one in result['intermediate_steps']:
             inputs.append(one[0])
         inputs.append(AIMessage(content=output))
-        return inputs
+        return result

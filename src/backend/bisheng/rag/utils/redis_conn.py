@@ -36,10 +36,10 @@ class RedisDB:
     def __open__(self):
         try:
             self.REDIS = redis.StrictRedis(
-                host=self.config["host"].split(":")[0],
-                port=int(self.config.get("host", ":6379").split(":")[1]),
-                db=int(self.config.get("db", 1)),
-                password=self.config.get("password"),
+                host='redis',
+                port=6379,
+                db=1,
+                password='',
                 decode_responses=True,
             )
         except Exception:

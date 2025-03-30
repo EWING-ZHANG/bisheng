@@ -22,8 +22,7 @@ infinity:
   db_name: 'default_db'
 redis:
   db: 2
-  # password: 'infini_rag_flow' 
-  host: 'redis:6380'
+  host: 'redis:6379'
 
 # postgres:
 #   name: 'rag_flow'

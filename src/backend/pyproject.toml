@@ -18,6 +18,7 @@ include = ["./bisheng/*", "bisheng/**/*"]
 bisheng = "bisheng.__main__:main"
 
 [tool.poetry.dependencies]
+pulsar-client = "3.5.0"
 bisheng_langchain = {path = "./bisheng_langchain-0.3.6.dev1.tar.gz"}
 bisheng_pyautogen = "0.3.2"
 langchain = "^0.2.16"
@@ -90,7 +91,6 @@ matplotlib = "3.8.4"
 cchardet = "^2.1.7"
 llama-index = "0.9.48"
 tenacity = "<8.4.0"
-bisheng-ragas = { version = "^1.0.1", source = "dataelem-index" }
 qianfan = "^0.4.4"
 dashscope = "^1.20.3"
 blobfile = "^3.0.0"
@@ -126,6 +126,7 @@ umap = "^0.1.1"
 tika = "^2.6.0"
 pypdf2 = "^3.0.1"
 aspose-slides = "^25.2.0"
+mysqlclient = "2.2.6"
 
 
 [tool.poetry.dev-dependencies]
@@ -171,9 +172,9 @@ priority = "explicit"
 [[tool.poetry.source]]
 name = "aliyun"
 url = "https://mirrors.aliyun.com/pypi/simple"
-priority = "primary"  # 设置为主镜像源
+priority = "supplemental"  # 设置为主镜像源
 
 [[tool.poetry.source]]
 name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple/"
-priority = "supplemental"  # 设置为备用镜像源
+priority = "primary"  # 设置为备用镜像源

@@ -16,7 +16,7 @@
 import re
 
 from openai.lib.azure import AzureOpenAI
-from zhipuai import ZhipuAI
+# from zhipuai import ZhipuAI
 from dashscope import Generation
 from abc import ABC
 from openai import OpenAI
@@ -444,7 +444,7 @@ class QWenChat(Base):
 
 class ZhipuChat(Base):
     def __init__(self, key, model_name="glm-3-turbo", **kwargs):
-        self.client = ZhipuAI(api_key=key)
+        # self.client = ZhipuAI(api_key=key)
         self.model_name = model_name
 
     def chat(self, system, history, gen_conf):

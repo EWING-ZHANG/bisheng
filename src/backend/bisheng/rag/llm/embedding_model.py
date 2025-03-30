@@ -32,7 +32,7 @@ from bisheng.api.util.file_utils import get_home_cache_dir
 from bisheng.rag.utils import num_tokens_from_string, truncate
 import google.generativeai as genai 
 import json
-from zhipuai import ZhipuAI
+# from zhipuai import ZhipuAI
 
 class Base(ABC):
     def __init__(self, key, model_name):
@@ -208,7 +208,7 @@ class QWenEmbed(Base):
 
 class ZhipuEmbed(Base):
     def __init__(self, key, model_name="embedding-2", **kwargs):
-        self.client = ZhipuAI(api_key=key)
+        # self.client = ZhipuAI(api_key=key)
         self.model_name = model_name
 
     def encode(self, texts: list):

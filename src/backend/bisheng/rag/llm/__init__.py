@@ -57,7 +57,7 @@ CvModel = {
     "Ollama": OllamaCV,
     "Xinference": XinferenceCV,
     "Tongyi-Qianwen": QWenCV,
-    "ZHIPU-AI": ZhipuAI,
+    # "ZHIPU-AI": ZhipuAI,
     "Moonshot": LocalCV,
     "Gemini": GeminiCV,
     "OpenRouter": OpenRouterCV,

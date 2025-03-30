@@ -21,7 +21,11 @@ RUN apt-get update && apt-get install procps -y
 RUN apt install vim fonts-wqy-zenhei -y
 # opencv
 RUN apt-get update && apt-get install -y libglib2.0-0 libsm6 libxrender1 libxext6 libgl1
-RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
+# RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2
+# 安装Poetry并设置PATH
+RUN curl -sSL https://install.python-poetry.org | python3 - --version 1.8.2 \
+    && export PATH="/root/.local/bin:$PATH" \
+    && poetry --version
 # # Add Poetry to PATH
 ENV PATH="${PATH}:/root/.local/bin"
 # # Copy the pyproject.toml and poetry.lock files
@@ -32,6 +36,10 @@ COPY bisheng_langchain-0.3.6.dev1.tar.gz ./
 
 RUN python -m pip install --upgrade pip && \
     pip install shapely==2.0.1
+# 使用官方地址拉取pypi依赖
+RUN poetry config --unset repositories.tsinghua && \
+    poetry config --unset repositories.aliyun && \
+    poetry config --unset repositories.dataelem-index
 
 # Install dependencies
 RUN poetry config virtualenvs.create false

@@ -5,7 +5,7 @@ mysql:
   name: 'bisheng_db'
   user: 'root'
   password: 'ewing'
-  host: '172.21.74.218'
+  host: mysql
   port: 3306
   max_connections: 100
   stale_timeout: 30
@@ -14,7 +14,7 @@ minio:
   password: 'infini_rag_flow'
   host: 'minio:9000'
 es:
-  hosts: 'http://ragflow-es-01:9200'
+  hosts: 'http://es01:9200'
   username: 'elastic'
   password: 'infini_rag_flow'
 infinity:
@@ -23,7 +23,7 @@ infinity:
 redis:
   db: 2
   # password: 'infini_rag_flow' 
-  host: '127.0.0.1:6380'
+  host: 'redis:6380'
 
 # postgres:
 #   name: 'rag_flow'

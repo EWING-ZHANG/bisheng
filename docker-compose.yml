@@ -2,7 +2,7 @@ version: '3.5'
 
 services:
   etcd:
-    container_name: milvus-etcd
+    container_name: merge-etcd
     image: quay.io/coreos/etcd:v3.5.5
     environment:
       - ETCD_AUTO_COMPACTION_MODE=revision
@@ -14,7 +14,7 @@ services:
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
 
   minio:
-    container_name: milvus-minio
+    container_name: merge-minio
     image: minio/minio:RELEASE.2022-03-17T06-34-49Z
     environment:
       MINIO_ACCESS_KEY: minioadmin
@@ -44,7 +44,7 @@ services:
   #     - "6650:6650"   # Pulsar 服务端口
   #     - "8080:8080"   # Pulsar Web 管理端口
   milvus:
-    container_name: milvus-standalone
+    container_name: merge-milvus
     image: milvusdb/milvus:v2.3.3
     command: ["milvus", "run", "standalone"]
     security_opt:
@@ -72,35 +72,94 @@ services:
       - etcd
       - minio
       # - pulsar
-  # redis:
-  #   container_name: bisheng-redis
-  #   image: redis:7.0.4
-  #   ports:
-  #     - "6379:6379"
-  #   environment:
-  #     TZ: Asia/Shanghai
-  #   volumes:
-  #     - ${DOCKER_VOLUME_DIRECTORY:-.}/data/redis:/data
-  #     - ${DOCKER_VOLUME_DIRECTORY:-.}/redis/redis.conf:/etc/redis.conf
-  #   command: redis-server /etc/redis.conf
-  #   healthcheck:
-  #     test: ["CMD-SHELL", 'redis-cli ping|grep -e "PONG\|NOAUTH"']
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 3
-  #   restart: on-failure
-  elasticsearch:
-    container_name: bisheng-es
-    image: bitnami/elasticsearch:8.17.0
-    user: root
+  redis:
+    container_name: merge-redis
+    image: valkey/valkey:8
     ports:
-      - "9200:9200"
-      - "9300:9300"
+      - "6379:6379"
     environment:
       TZ: Asia/Shanghai
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/data/es:/bitnami/elasticsearch/data
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/data/redis:/data
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/redis/redis.conf:/etc/redis.conf
+    command: redis-server /etc/redis.conf
+    healthcheck:
+      test: ["CMD-SHELL", 'redis-cli ping|grep -e "PONG\|NOAUTH"']
+      interval: 10s
+      timeout: 5s
+      retries: 3
     restart: on-failure
+  # es01:
+  #   container_name: merge-es
+  #   image: bitnami/elasticsearch:8.17.0
+  #   user: root
+  #   ports:
+  #     - "9200:9200"
+  #     - "9300:9300"
+  #   environment:
+  #     - TZ=Asia/Shanghai
+  #     - ELASTIC_PASSWORD=infini_rag_flow
+  #   volumes:
+  #     - ${DOCKER_VOLUME_DIRECTORY:-.}/data/es:/bitnami/elasticsearch/data
+  #   restart: on-failure
+  es01:
+    container_name: merge-es
+    profiles:
+      - elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    # todo 防止报错 临时注释掉
+    # volumes:
+    #   - esdata01:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    env_file: .env
+    environment:
+      - node.name=es01
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - bootstrap.memory_lock=false
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - TZ=${TIMEZONE}
+    mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:9200"]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    restart: on-failure
+  # mysql:
+  #   container_name: merge-mysql
+  #   image: mysql:8.0.39
+  #   ports:
+  #     - "3306:3306"
+  #   command: --skip-ssl
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: "ewing"  # 数据库密码，如果修改需要同步修改bisheng/congfig/config.yaml配置database_url的mysql连接密码
+  #     MYSQL_DATABASE: bisheng_db
+  #     MYSQL_SSL_MODE:  DISABLED
+  #     TZ: Asia/Shanghai
+  #   # volumes:
+  #     # - ${DOCKER_VOLUME_DIRECTORY:-.}/mysql/conf/my.cnf:/etc/mysql/my.cnf
+  #     # - ${DOCKER_VOLUME_DIRECTORY:-.}/mysql/data:/var/lib/mysql
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "exit | mysql -u root -p$$MYSQL_ROOT_PASSWORD"]
+  #     start_period: 30s
+  #     interval: 20s
+  #     timeout: 10s
+  #     retries: 4
+  #   restart: on-failure
+  
+
+
+# volumes:
+#   mysql_data:
+#     driver: local
 networks:
   default:
     name: milvus

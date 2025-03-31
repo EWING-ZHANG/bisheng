@@ -23,10 +23,10 @@ from loguru import logger
 import debugpy
 from bisheng.api import settings as ragflowSettings
 
-debugpy.listen(('0.0.0.0', 5678))
-print("Waiting for debugger to attach...")
+# debugpy.listen(('0.0.0.0', 5678))
+# print("Waiting for debugger to attach...")
 # 等待调试器连接
-debugpy.wait_for_client() 
+# debugpy.wait_for_client() 
 
 def handle_http_exception(req: Request, exc: Exception) -> ORJSONResponse:
     if isinstance(exc, HTTPException):
@@ -62,6 +62,11 @@ async def lifespan(app: FastAPI):
     yield
     teardown_services()
     thread_pool.tear_down()
+    # executor = ThreadPoolExecutor(max_workers=1)
+    # executor.submit(update_progress)
+    # yield
+    # # 关闭线程池
+    # executor.shutdown(wait=False)
 
 
 def create_app():

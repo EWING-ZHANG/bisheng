@@ -37,5 +37,7 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
     && poetry install --no-root \
     && poetry install
-RUN python -c "import nltk; nltk.download('wordnet');"
+    COPY ./nltk_data /root/nltk_data/
+
+# RUN python -c "import nltk; nltk.download('wordnet');"
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

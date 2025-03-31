@@ -9,8 +9,8 @@ services:
       - ETCD_AUTO_COMPACTION_RETENTION=1000
       - ETCD_QUOTA_BACKEND_BYTES=4294967296
       - ETCD_SNAPSHOT_COUNT=50000
-    volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+    # volumes:
+    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
 
   minio:
@@ -55,9 +55,9 @@ services:
       # MILVUS_PULSAR_ADDRESS: pulsar  # 使用 Docker 服务名（同一网络内）
       # MILVUS_PULSAR_PORT: 6650
       # MILVUS_PULSAR_MAXMESSAGESIZE: 10485760  # 调大为 10MB
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/data/milvus:/var/lib/milvus
+    # volumes:
+    #   - /etc/localtime:/etc/localtime:ro
+    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/data/milvus:/var/lib/milvus
     restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
@@ -133,27 +133,67 @@ services:
       timeout: 10s
       retries: 120
     restart: on-failure
-  # mysql:
-  #   container_name: merge-mysql
-  #   image: mysql:8.0.39
-  #   ports:
-  #     - "3306:3306"
-  #   command: --skip-ssl
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: "ewing"  # 数据库密码，如果修改需要同步修改bisheng/congfig/config.yaml配置database_url的mysql连接密码
-  #     MYSQL_DATABASE: bisheng_db
-  #     MYSQL_SSL_MODE:  DISABLED
-  #     TZ: Asia/Shanghai
-  #   # volumes:
-  #     # - ${DOCKER_VOLUME_DIRECTORY:-.}/mysql/conf/my.cnf:/etc/mysql/my.cnf
-  #     # - ${DOCKER_VOLUME_DIRECTORY:-.}/mysql/data:/var/lib/mysql
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "exit | mysql -u root -p$$MYSQL_ROOT_PASSWORD"]
-  #     start_period: 30s
-  #     interval: 20s
-  #     timeout: 10s
-  #     retries: 4
-  #   restart: on-failure
+  mysql:
+    container_name: merge-mysql
+    image: mysql:8.0.39
+    ports:
+      - "3306:3306"
+    command: --skip-ssl
+    environment:
+      MYSQL_ROOT_PASSWORD: "ewing"  # 数据库密码，如果修改需要同步修改bisheng/congfig/config.yaml配置database_url的mysql连接密码
+      MYSQL_DATABASE: bisheng_db
+      MYSQL_SSL_MODE:  DISABLED
+      TZ: Asia/Shanghai
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/mysql/conf/my.cnf:/etc/mysql/my.cnf
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/mysql/data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "exit | mysql -u root -p$$MYSQL_ROOT_PASSWORD"]
+      start_period: 30s
+      interval: 20s
+      timeout: 10s
+      retries: 4
+    restart: on-failure
+  backend:
+      container_name: bisheng-backend-v8
+      image: dataelement/bisheng-backend:v8.0
+      ports:
+        - "7860:7860"
+      environment:
+        TZ: Asia/Shanghai
+        BS_MILVUS_CONNECTION_ARGS: '{"host":"milvus","port":"19530","user":"","password":"","secure":false}'
+        BS_MILVUS_IS_PARTITION: 'true'
+        BS_MILVUS_PARTITION_SUFFIX: '1'
+        BS_ELASTICSEARCH_URL: 'http://es01:9200'
+        BS_ELASTICSEARCH_SSL_VERIFY: '{}'  # 可根据自己部署的密码进行配置 '{"basic_auth": ("elastic", "elastic")}'
+        BS_MINIO_SCHEMA: 'false'
+        BS_MINIO_CERT_CHECK: 'false'
+        BS_MINIO_ENDPOINT: 'minio:9000'
+        BS_MINIO_SHAREPOIN: 'minio:9000'
+        BS_MINIO_ACCESS_KEY: 'minioadmin'
+        BS_MINIO_SECRET_KEY: 'minioadmin'
+      # volumes:
+      #   - ${DOCKER_VOLUME_DIRECTORY:-.}/bisheng/config/config.yaml:/app/bisheng/config.yaml
+      #   - ${DOCKER_VOLUME_DIRECTORY:-.}/bisheng/entrypoint.sh:/app/entrypoint.sh
+      #   - ${DOCKER_VOLUME_DIRECTORY:-.}/data/bisheng:/app/data
+      security_opt:
+        - seccomp:unconfined
+      # command会直接覆盖dockerfile中的命令??? 
+      # command: sh entrypoint.sh # --workers 表示使用几个进程，提高并发度 
+      restart: on-failure
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://127.0.0.1:7860/health"]
+        start_period: 30s
+        interval: 90s
+        timeout: 30s
+        retries: 3
+      depends_on:
+        mysql:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+        # office:
+        #   condition: service_started      
   
 
 

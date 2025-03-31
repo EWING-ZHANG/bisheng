@@ -47,8 +47,8 @@ task_exe(){
     local retry_count=0
     while ! $STOP && [ $retry_count -lt $MAX_RETRIES ]; do
         echo "Starting task_executor.py for task $task_id (Attempt $((retry_count+1)))"
-        $PY /app/bisheng/rag/svr/task_executor.py "$task_id"
-        #  $PY /home/ewing/newProject/bisheng/src/backend/bisheng/rag/svr/task_executor.py "$task_id"
+        #  $PY /app/bisheng/rag/svr/task_executor.py "$task_id"
+         $PY /home/ewing/newProject/bisheng/src/backend/bisheng/rag/svr/task_executor.py "$task_id"
         EXIT_CODE=$?
         if [ $EXIT_CODE -eq 0 ]; then
             echo "task_executor.py for task $task_id exited successfully."

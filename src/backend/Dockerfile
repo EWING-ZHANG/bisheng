@@ -23,8 +23,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     ca-certificates \
     && mkdir -p /var/log/supervisor \
-    && rm -rf /var/lib/apt/lists/* \
-    && update-ca-certificates
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/* 
+  
 
 # 复制配置和脚本
 COPY ./supervisord.conf /etc/supervisor/conf.d/

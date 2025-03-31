@@ -190,5 +190,5 @@ if __name__ == '__main__':
     thread = ThreadPoolExecutor(max_workers=1)
     thread.submit(update_progress)
 
-    uvicorn.run(app, host='0.0.0.0', port=7860, workers=1)
+    uvicorn.run(app, host='0.0.0.0', port=7861, workers=1)
 

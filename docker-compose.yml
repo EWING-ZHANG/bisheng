@@ -155,8 +155,8 @@ services:
       retries: 4
     restart: on-failure
   backend:
-      container_name: bisheng-backend-v8
-      image: dataelement/bisheng-backend:v8.0
+      container_name: bisheng-backend-v10
+      image: dataelement/bisheng-backend:v10.0
       ports:
         - "7860:7860"
       environment:
@@ -194,7 +194,19 @@ services:
           condition: service_healthy
         # office:
         #   condition: service_started      
-  
+  frontend:
+    container_name: bisheng-frontend
+    image: frontend-zhichang:v1.0
+    ports:
+      - "3001:3001"
+    environment:
+      TZ: Asia/Shanghai
+    # volumes:
+    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/nginx/nginx.conf:/etc/nginx/nginx.conf
+    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/nginx/conf.d:/etc/nginx/conf.d
+    restart: on-failure
+    depends_on:
+      - backend
 
 
 # volumes:

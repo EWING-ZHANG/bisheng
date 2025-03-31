@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y libglib2.0-0 libsm6 libxrender1 libxext
 # 安装 Poetry
 RUN curl -sSL --insecure https://install.python-poetry.org | python3 - --version 1.8.2
 # 检查 /root/.local/bin 是否存在 poetry
-RUN [ -f /root/.local/bin/poetry ] || echo "Poetry not found in /root/.local/bin!" && exit 1
+# RUN [ -f /root/.local/bin/poetry ] || echo "Poetry not found in /root/.local/bin!" && exit 1
 # 更新 PATH 并验证 poetry 版本
 ENV PATH="/root/.local/bin:${PATH}"
 RUN poetry --version

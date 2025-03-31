@@ -11,6 +11,7 @@ def update_progress():
         try:
             time.sleep(3)
             DocumentService.update_progress()
+            logging.info("update progress")
         except Exception as e:
             logging.exception("update_progress exception")
 

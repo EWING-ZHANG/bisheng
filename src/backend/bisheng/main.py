@@ -9,7 +9,7 @@ from bisheng.interface.utils import setup_llm_caching
 from bisheng.restructure.register import register_restructure
 from bisheng.services.utils import initialize_services, teardown_services
 from bisheng.settings import settings
-from bisheng.utils.http_middleware import CustomMiddleware
+# from bisheng.utils.http_middleware import CustomMiddleware
 from bisheng.utils.logger import configure
 from bisheng.utils.threadpool import thread_pool
 from fastapi import FastAPI, HTTPException, Request, status
@@ -22,10 +22,11 @@ from fastapi_jwt_auth.exceptions import AuthJWTException
 from loguru import logger
 import debugpy
 from bisheng.api import settings as ragflowSettings
-
+import faulthandler
+faulthandler.enable()
 # debugpy.listen(('0.0.0.0', 5678))
 # print("Waiting for debugger to attach...")
-# 等待调试器连接
+# # 等待调试器连接
 # debugpy.wait_for_client() 
 
 def handle_http_exception(req: Request, exc: Exception) -> ORJSONResponse:
@@ -55,18 +56,17 @@ _EXCEPTION_HANDLERS = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 移动到了init.sh中
     initialize_services()
     setup_llm_caching()
     init_default_data()
+    # ragflowSettings.init_settings()
+
     # LangfuseInstance.update()
     yield
     teardown_services()
     thread_pool.tear_down()
-    # executor = ThreadPoolExecutor(max_workers=1)
-    # executor.submit(update_progress)
-    # yield
-    # # 关闭线程池
-    # executor.shutdown(wait=False)
+
 
 
 def create_app():
@@ -94,7 +94,7 @@ def create_app():
         allow_headers=['*'],
     )
 
-    app.add_middleware(CustomMiddleware)
+    # app.add_middleware(CustomMiddleware)
 
     @AuthJWT.load_config
     def get_config():
@@ -182,13 +182,13 @@ def update_progress():
 if __name__ == '__main__':
     import uvicorn
     # 设置python环境
-    set_pythonpath()
+    # set_pythonpath()
     
-    ragflowSettings.init_settings()
-    # 直接执行shell脚本
-    run_workers()
-    thread = ThreadPoolExecutor(max_workers=1)
-    thread.submit(update_progress)
+    # ragflowSettings.init_settings()
+    # # 直接执行shell脚本
+    # run_workers()
+    # thread = ThreadPoolExecutor(max_workers=1)
+    # thread.submit(update_progress)
 
-    uvicorn.run(app, host='0.0.0.0', port=7861, workers=1)
+uvicorn.run(app, host='0.0.0.0', port=7860, workers=1) 
 

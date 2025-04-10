@@ -38,8 +38,8 @@ object_storage:
     schema: false
     cert_check: false
     #9100可以通 9101不同（web页面也只能访问9101 不同端口有不同的作用
-    endpoint: '127.0.0.1:9100'
-    sharepoint: '127.0.0.1:9100'
+    endpoint: '127.0.0.1:9000'
+    sharepoint: '127.0.0.1:9000'
 #    access_key: 'gAAAAABnW6UV3yoAyl9nR9-WOb-KVSGbyqjj8nmG0iHdf0D1gZzqXeL3Q5qoGghwfvXVnltDLjPeJm3wyFBEQ8FoYflKJ1vzYtNXtRqnmGyFl7iTaDFkzF8='
 #    secret_key: 'gAAAAABnW6UuIGuFtWOtIkLVr0iyjh4UFm49CSG2TDOCiRjsk0XnZ6VbXxEz99fdooZ0mGRtS1IqA3U1HXm_zAyZX2gVc6UMoaYLD9Jl2vBjx9HW7Vy3A-AcSfHCH0peCwX4QF3lZGIL'
     access_key: 'minioadmin'

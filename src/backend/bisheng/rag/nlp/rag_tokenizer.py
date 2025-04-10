@@ -171,9 +171,9 @@ class RagTokenizer:
             F += freq
             L += 0 if len(tk) < 2 else 1
             tks.append(tk)
-        #F /= len(tks)
+        #F /= len(tks) 官方注释掉了
         L /= len(tks)
-        logging.debug("[SC] {} {} {} {} {}".format(tks, len(tks), L, F, B / len(tks) + L + F))
+        # logging.debug("[SC] {} {} {} {} {}".format(tks, len(tks), L, F, B / len(tks) + L + F))
         return tks, B / len(tks) + L + F
 
     def sortTks_(self, tkslist):
@@ -325,7 +325,7 @@ class RagTokenizer:
                 res.append(" ".join(self.sortTks_(tkslist)[0][0]))
 
         res = " ".join(self.english_normalize_(res))
-        logging.debug("[TKS] {}".format(self.merge_(res)))
+        # logging.debug("[TKS] {}".format(self.merge_(res)))
         return self.merge_(res)
 
     def fine_grained_tokenize(self, tks):

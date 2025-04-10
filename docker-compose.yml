@@ -13,38 +13,86 @@ services:
     #   - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
 
-  minio:
-    container_name: merge-minio
-    image: minio/minio:RELEASE.2022-03-17T06-34-49Z
-    environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    ports:
-      - "9100:9000"
-      - "9101:9001"
-    volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
-    command: minio server /minio_data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-  # pulsar:
-  #   image: apache/pulsar:2.11.0
-  #   container_name: milvus-pulsar
-  #   command: >
-  #     /bin/bash -c "
-  #       bin/pulsar standalone --no-functions-worker -nss
-  #       -c broker.conf=broker.maxMessageSize=10485760
-  #     "
+  # minio:
+  #   container_name: merge-minio
+  #   image: minio/minio:RELEASE.2022-03-17T06-34-49Z
   #   environment:
-  #     PULSAR_MEM: "-Xms512m -Xmx512m"
+  #     MINIO_ACCESS_KEY: minioadmin
+  #     MINIO_SECRET_KEY: minioadmin
   #   ports:
-  #     - "6650:6650"   # Pulsar 服务端口
-  #     - "8080:8080"   # Pulsar Web 管理端口
+  #     - "9100:9000"
+  #     - "9101:9001"
+  #   # volumes:
+  #   #   - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+  #   command: minio server /minio_data --console-address ":9001"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+  #     interval: 30s
+  #     timeout: 20s
+  #     retries: 3
+  minio:
+    image: quay.io/minio/minio:RELEASE.2023-12-20T01-00-02Z
+    container_name: merge-minio
+    command: server --console-address ":9001" /data
+    ports:
+      - 9000:9000
+      - 9001:9001
+    # env_file: .env
+    environment:
+      - MINIO_ROOT_USER=rag_flow
+      - MINIO_ROOT_PASSWORD=infini_rag_flow
+      - TZ='Asia/Shanghai'
+    volumes:
+      # - /data:/data
+       - minio_data:/data
+    restart: on-failure
+      
+  pulsar:
+    image: apachepulsar/pulsar:2.11.0
+    container_name: milvus-pulsar
+    command: >
+      /bin/bash -c "
+        bin/pulsar standalone --no-functions-worker -nss
+        -c broker.conf=broker.maxMessageSize=10485760
+      "
+    environment:
+      PULSAR_MEM: "-Xms512m -Xmx512m"
+    ports:
+      - "6650:6650"   # Pulsar 服务端口
+      - "8080:8080"   # Pulsar Web 管理端口
+    volumes:
+      - pulsardata:/pulsar/data
+  # milvus:
+  #   container_name: merge-milvus
+  #   image: milvusdb/milvus:v2.3.3
+  #   command: ["milvus", "run", "standalone"]
+  #   security_opt:
+  #   - seccomp:unconfined
+  #   environment:
+  #     ETCD_ENDPOINTS: etcd:2379
+  #     MINIO_ADDRESS: minio:9000
+  #     MILVUS_PULSAR_ADDRESS: pulsar  # 使用 Docker 服务名（同一网络内）
+  #     MILVUS_PULSAR_PORT: 6650
+  #     MILVUS_PULSAR_MAXMESSAGESIZE: 10485760  # 调大为 10MB
+  #   # volumes:
+  #   #   - /etc/localtime:/etc/localtime:ro
+  #   #   - ${DOCKER_VOLUME_DIRECTORY:-.}/data/milvus:/var/lib/milvus
+  #   restart: on-failure
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+  #     start_period: 90s
+  #     interval: 30s
+  #     timeout: 20s
+  #     retries: 3
+  #   ports:
+  #     - "19530:19530"
+  #     - "9091:9091"
+  #   depends_on:
+  #     - etcd
+  #     - minio
+  #     - pulsar
   milvus:
-    container_name: merge-milvus
+    container_name: milvus-standalone
     image: milvusdb/milvus:v2.3.3
     command: ["milvus", "run", "standalone"]
     security_opt:
@@ -52,12 +100,12 @@ services:
     environment:
       ETCD_ENDPOINTS: etcd:2379
       MINIO_ADDRESS: minio:9000
-      # MILVUS_PULSAR_ADDRESS: pulsar  # 使用 Docker 服务名（同一网络内）
-      # MILVUS_PULSAR_PORT: 6650
-      # MILVUS_PULSAR_MAXMESSAGESIZE: 10485760  # 调大为 10MB
-    # volumes:
-    #   - /etc/localtime:/etc/localtime:ro
-    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/data/milvus:/var/lib/milvus
+      MILVUS_PULSAR_ADDRESS: pulsar  # 使用 Docker 服务名（同一网络内）
+      MILVUS_PULSAR_PORT: 6650
+      MILVUS_PULSAR_MAXMESSAGESIZE: 10485760  # 调大为 10MB
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/data/milvus:/var/lib/milvus
     restart: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
@@ -71,7 +119,7 @@ services:
     depends_on:
       - etcd
       - minio
-      # - pulsar
+      - pulsar  # 添加依赖
   redis:
     container_name: merge-redis
     image: valkey/valkey:8
@@ -89,40 +137,28 @@ services:
       timeout: 5s
       retries: 3
     restart: on-failure
-  # es01:
-  #   container_name: merge-es
-  #   image: bitnami/elasticsearch:8.17.0
-  #   user: root
-  #   ports:
-  #     - "9200:9200"
-  #     - "9300:9300"
-  #   environment:
-  #     - TZ=Asia/Shanghai
-  #     - ELASTIC_PASSWORD=infini_rag_flow
-  #   volumes:
-  #     - ${DOCKER_VOLUME_DIRECTORY:-.}/data/es:/bitnami/elasticsearch/data
-  #   restart: on-failure
+
   es01:
     container_name: merge-es
     profiles:
       - elasticsearch
-    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
     # todo 防止报错 临时注释掉
-    # volumes:
-    #   - esdata01:/usr/share/elasticsearch/data
+    volumes:
+      - esdata01:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
-    env_file: .env
+    # env_file: .env
     environment:
       - node.name=es01
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_PASSWORD=infini_rag_flow
       - bootstrap.memory_lock=false
       - discovery.type=single-node
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
       - xpack.security.transport.ssl.enabled=false
-      - TZ=${TIMEZONE}
-    mem_limit: ${MEM_LIMIT}
+      - TZ='Asia/Shanghai'
+    mem_limit: 8073741824
     ulimits:
       memlock:
         soft: -1
@@ -155,8 +191,8 @@ services:
       retries: 4
     restart: on-failure
   backend:
-      container_name: bisheng-backend-v10
-      image: dataelement/bisheng-backend:v10.0
+      container_name: bisheng-backend-v19
+      image: dataelement/bisheng-backend:v19.0
       ports:
         - "7860:7860"
       environment:
@@ -170,12 +206,13 @@ services:
         BS_MINIO_CERT_CHECK: 'false'
         BS_MINIO_ENDPOINT: 'minio:9000'
         BS_MINIO_SHAREPOIN: 'minio:9000'
-        BS_MINIO_ACCESS_KEY: 'minioadmin'
-        BS_MINIO_SECRET_KEY: 'minioadmin'
+        BS_MINIO_ACCESS_KEY: 'rag_flow'
+        BS_MINIO_SECRET_KEY: 'infini_rag_flow'
       # volumes:
       #   - ${DOCKER_VOLUME_DIRECTORY:-.}/bisheng/config/config.yaml:/app/bisheng/config.yaml
       #   - ${DOCKER_VOLUME_DIRECTORY:-.}/bisheng/entrypoint.sh:/app/entrypoint.sh
       #   - ${DOCKER_VOLUME_DIRECTORY:-.}/data/bisheng:/app/data
+      #   - ${DOCKER_VOLUME_DIRECTORY:-.}/bisheng/config/service_conf.yaml:/app/bisheng/conf/service_conf.yaml
       security_opt:
         - seccomp:unconfined
       # command会直接覆盖dockerfile中的命令??? 
@@ -196,22 +233,27 @@ services:
         #   condition: service_started      
   frontend:
     container_name: bisheng-frontend
-    image: frontend-zhichang:v1.0
+    image: zhichang-frontend:latest
     ports:
-      - "3001:3001"
+      - "13002:3001"
     environment:
       TZ: Asia/Shanghai
-    # volumes:
-    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/nginx/nginx.conf:/etc/nginx/nginx.conf
-    #   - ${DOCKER_VOLUME_DIRECTORY:-.}/nginx/conf.d:/etc/nginx/conf.d
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/nginx/conf.d:/etc/nginx/conf.d
     restart: on-failure
     depends_on:
       - backend
 
 
-# volumes:
-#   mysql_data:
-#     driver: local
+
+volumes:
+  minio_data:
+    driver: local
+  esdata01:
+    driver: local
+  pulsardata:
+    driver: local
 networks:
   default:
     name: milvus

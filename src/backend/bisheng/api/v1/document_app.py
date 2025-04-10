@@ -401,6 +401,8 @@ def change_parser(req: ChangeParserRequest = Body(...),
             tenant_id = DocumentService.get_tenant_id(req.doc_id)
             if not tenant_id:
                 return get_data_error_result(message="Tenant not found!")
+            import logging
+            logging.info(f"--------------es配置 {settings.docStoreConn}")
             if settings.docStoreConn.indexExist(search.index_name_by_kb(doc.kb_id), doc.kb_id):
                 settings.docStoreConn.delete({"doc_id": doc.id}, search.index_name_by_kb(doc.kb_id), doc.kb_id)
 
@@ -432,6 +434,8 @@ def run(req: ParseRun=Body(...),
             e, doc = DocumentService.get_by_id(id)
             if not e:
                 return get_data_error_result(message="Document not found!")
+            import logging
+            logging.info(f"--------------es配置 {settings.docStoreConn}")
             if settings.docStoreConn.indexExist(search.index_name(doc.kb_id), doc.kb_id):
                 settings.docStoreConn.delete({"doc_id": id}, search.index_name_by_kb(doc.kb_id), doc.kb_id)
 

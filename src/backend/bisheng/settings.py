@@ -59,7 +59,7 @@ class MilvusConf(BaseModel):
 
 
 class ElasticsearchConf(BaseModel):
-    url: Optional[str] = Field(default='http://127.0.0.1:1200', description='elasticsearch访问地址')
+    url: Optional[str] = Field(default='http://es01:9200', description='elasticsearch访问地址')
     ssl_verify: Optional[str] = Field(default='{"basic_auth": ("elastic", "infini_rag_flow")}', description='额外的参数')
 
 

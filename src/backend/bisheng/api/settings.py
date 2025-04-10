@@ -24,6 +24,7 @@ from bisheng.rag.nlp import search
 from bisheng.graphrag import search as kg_search
 from bisheng.api.util import get_base_config, decrypt_database_config
 from bisheng.api.constants import RAG_FLOW_SERVICE_NAME
+from bisheng.utils.logger import configure, logger
 
 LIGHTEN = int(os.environ.get('LIGHTEN', "0"))
 
@@ -162,14 +163,17 @@ def init_settings():
     FEISHU_OAUTH = get_base_config("oauth", {}).get("feishu")
 
     global DOC_ENGINE, docStoreConn, retrievaler, kg_retrievaler
-    DOC_ENGINE = os.environ.get('DOC_ENGINE', "elasticsearch")
-    if DOC_ENGINE == "elasticsearch":
-        docStoreConn = bisheng.rag.utils.es_conn.ESConnection()
+    # 直接写死
+    # DOC_ENGINE = os.environ.get('DOC_ENGINE', "elasticsearch")
+    # if DOC_ENGINE == "elasticsearch":
+    docStoreConn = bisheng.rag.utils.es_conn.ESConnection()
+    logger.info(f'-----es初始化配置-------{docStoreConn}')
+
+    
     # elif DOC_ENGINE == "infinity":
     #     docStoreConn = bisheng.rag.utils.infinity_conn.InfinityConnection()
-    else:
-        raise Exception(f"Not supported doc engine: {DOC_ENGINE}")
-
+    # else:
+    #     raise Exception(f"Not supported doc engine: {DOC_ENGINE}")
     retrievaler = search.Dealer(docStoreConn)
     kg_retrievaler = kg_search.KGSearch(docStoreConn)
 

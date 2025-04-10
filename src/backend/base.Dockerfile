@@ -57,6 +57,6 @@ RUN poetry config virtualenvs.create false
 RUN poetry install --no-interaction --no-ansi --without dev
 
 # install nltk_data
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger'); nltk.download('averaged_perceptron_tagger_eng'); nltk.download('wordnet')"
+# RUN python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger'); nltk.download('averaged_perceptron_tagger_eng'); nltk.download('wordnet')"
 
 CMD ["sh entrypoint.sh"]

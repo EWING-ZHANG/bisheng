@@ -34,7 +34,6 @@ def index_name_by_tenant(tenant_id):
 
 
 def index_name_by_kb(kb_id): 
-    # edited查询该用户下面的所有索引 这种是在session里面查找的
     knowledge = KnowledgeDao.query_by_id(kb_id)
     return knowledge.index_name
 def index_name_by_doc(doc_id):

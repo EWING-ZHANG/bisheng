@@ -29,8 +29,11 @@ RUN apt-get update && apt-get install -y \
 
 # 复制配置和脚本
 COPY ./supervisord.conf /etc/supervisor/conf.d/
-COPY ./launch_backend_service.sh /home/ewing/newProject/bisheng/docker/
-RUN chmod +x /home/ewing/newProject/bisheng/docker/launch_backend_service.sh
+# COPY ./launch_backend_service.sh /home/ewing/newProject/bisheng/docker/
+RUN chmod +x /app/launch_backend_service.sh
+RUN chmod +x /app/init.sh
+RUN chmod +x /app/launch_backend_service.sh
+
 
 # 安装 Python 依赖
 COPY pyproject.toml poetry.lock ./
@@ -38,6 +41,5 @@ RUN poetry config virtualenvs.create false \
     && poetry install --no-root \
     && poetry install
     COPY ./nltk_data /root/nltk_data/
-
 # RUN python -c "import nltk; nltk.download('wordnet');"
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

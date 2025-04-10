@@ -651,7 +651,7 @@ description = "bisheng langchain modules"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "bisheng_langchain-0.3.6.dev1.tar.gz", hash = "sha256:1d40a38fde95361d4ed0da11b69f4fb0dc8c392543f746809fe2d3824d0c6e83"},
+    {file = "bisheng_langchain-0.3.6.dev1.tar.gz", hash = "sha256:72c0142b063ba526f03d8c9068a9f381508b71c42189571931672a09fa34d34c"},
 ]
 
 [package.dependencies]
@@ -671,6 +671,7 @@ pydantic = "*"
 pymupdf = "1.23.8"
 shapely = "2.0.2"
 websocket-client = "*"
+zhipuai = "*"
 
 [package.source]
 type = "file"
@@ -1802,6 +1803,22 @@ websocket-client = "*"
 
 [package.extras]
 tokenizer = ["tiktoken"]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+reference = "tsinghua"
+
+[[package]]
+name = "dataclasses"
+version = "0.6"
+description = "A backport of the dataclasses module for Python 3.6"
+optional = false
+python-versions = "*"
+files = [
+    {file = "dataclasses-0.6-py3-none-any.whl", hash = "sha256:454a69d788c7fda44efd71e259be79577822f5e3f53f029a22d08004e951dc9f"},
+    {file = "dataclasses-0.6.tar.gz", hash = "sha256:6988bd2b895eef432d562370bb707d540f32f7360ab13da45340101bc2307d84"},
+]
 
 [package.source]
 type = "legacy"
@@ -11092,6 +11109,28 @@ files = [
 idna = ">=2.0"
 multidict = ">=4.0"
 propcache = ">=0.2.0"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+reference = "tsinghua"
+
+[[package]]
+name = "zhipuai"
+version = "1.0.7"
+description = "A SDK library for accessing big model apis from ZhipuAI"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "zhipuai-1.0.7-py3-none-any.whl", hash = "sha256:360c01b8c2698f366061452e86d5a36a5ff68a576ea33940da98e4806f232530"},
+    {file = "zhipuai-1.0.7.tar.gz", hash = "sha256:b80f699543d83cce8648acf1ce32bc2725d1c1c443baffa5882abc2cc704d581"},
+]
+
+[package.dependencies]
+cachetools = "*"
+dataclasses = "*"
+PyJWT = "*"
+requests = "*"
 
 [package.source]
 type = "legacy"

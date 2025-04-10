@@ -20,7 +20,7 @@ redis_url: "redis://redis:6379/1"
 #   db: 1
 
 # celery的broken地址
-celery_redis_url: "redis://redis:6379/2"
+celery_redis_url: "redis://redis:6379/1"
 
 # 知识库的milvus和es配置  支持使用 !env ${PATH} 填写环境变量的值, 若环境变量不存在则会报错
 vector_stores:
@@ -44,12 +44,12 @@ object_storage:
     schema: false
     cert_check: false
     #9100可以通 9101不同（web页面也只能访问9101 不同端口有不同的作用
-    endpoint: 'minio:9100'
-    sharepoint: 'minio:9100'
+    endpoint: 'minio:9000'
+    sharepoint: 'minio:9000'
 #    access_key: 'gAAAAABnW6UV3yoAyl9nR9-WOb-KVSGbyqjj8nmG0iHdf0D1gZzqXeL3Q5qoGghwfvXVnltDLjPeJm3wyFBEQ8FoYflKJ1vzYtNXtRqnmGyFl7iTaDFkzF8='
 #    secret_key: 'gAAAAABnW6UuIGuFtWOtIkLVr0iyjh4UFm49CSG2TDOCiRjsk0XnZ6VbXxEz99fdooZ0mGRtS1IqA3U1HXm_zAyZX2gVc6UMoaYLD9Jl2vBjx9HW7Vy3A-AcSfHCH0peCwX4QF3lZGIL'
-    access_key: 'minioadmin'
-    secret_key: 'minioadmin'
+    access_key: 'ragflow'
+    secret_key: 'infini_rag_flow'
 
 environment:
   env: dev
